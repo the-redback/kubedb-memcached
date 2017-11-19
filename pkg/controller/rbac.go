@@ -1,17 +1,17 @@
 package controller
 
 import (
-	kutilcore "github.com/appscode/kutil/core/v1"
-	kutilrbac "github.com/appscode/kutil/rbac/v1beta1"
+	core_util "github.com/appscode/kutil/core/v1"
+	rbac_util "github.com/appscode/kutil/rbac/v1beta1"
 	"github.com/k8sdb/apimachinery/apis/kubedb"
-	tapi "github.com/k8sdb/apimachinery/apis/kubedb/v1alpha1"
+	api "github.com/k8sdb/apimachinery/apis/kubedb/v1alpha1"
 	core "k8s.io/api/core/v1"
 	rbac "k8s.io/api/rbac/v1beta1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (c *Controller) deleteRole(memcached *tapi.Memcached) error {
+func (c *Controller) deleteRole(memcached *api.Memcached) error {
 	// Delete existing Roles
 	if err := c.Client.RbacV1beta1().Roles(memcached.Namespace).Delete(memcached.OffshootName(), nil); err != nil {
 		if !kerr.IsNotFound(err) {
@@ -21,9 +21,9 @@ func (c *Controller) deleteRole(memcached *tapi.Memcached) error {
 	return nil
 }
 
-func (c *Controller) createRole(memcached *tapi.Memcached) error {
+func (c *Controller) createRole(memcached *api.Memcached) error {
 	// Create new Roles
-	_, err := kutilrbac.CreateOrPatchRole(
+	_, err := rbac_util.CreateOrPatchRole(
 		c.Client,
 		metav1.ObjectMeta{
 			Name:      memcached.OffshootName(),
@@ -33,7 +33,7 @@ func (c *Controller) createRole(memcached *tapi.Memcached) error {
 			in.Rules = []rbac.PolicyRule{
 				{
 					APIGroups:     []string{kubedb.GroupName},
-					Resources:     []string{tapi.ResourceTypeMemcached},
+					Resources:     []string{api.ResourceTypeMemcached},
 					ResourceNames: []string{memcached.Name},
 					Verbs:         []string{"get"},
 				},
@@ -44,7 +44,7 @@ func (c *Controller) createRole(memcached *tapi.Memcached) error {
 	return err
 }
 
-func (c *Controller) deleteServiceAccount(memcached *tapi.Memcached) error {
+func (c *Controller) deleteServiceAccount(memcached *api.Memcached) error {
 	// Delete existing ServiceAccount
 	if err := c.Client.CoreV1().ServiceAccounts(memcached.Namespace).Delete(memcached.OffshootName(), nil); err != nil {
 		if !kerr.IsNotFound(err) {
@@ -54,9 +54,9 @@ func (c *Controller) deleteServiceAccount(memcached *tapi.Memcached) error {
 	return nil
 }
 
-func (c *Controller) createServiceAccount(memcached *tapi.Memcached) error {
+func (c *Controller) createServiceAccount(memcached *api.Memcached) error {
 	// Create new ServiceAccount
-	_, err := kutilcore.CreateOrPatchServiceAccount(
+	_, err := core_util.CreateOrPatchServiceAccount(
 		c.Client,
 		metav1.ObjectMeta{
 			Name:      memcached.OffshootName(),
@@ -69,7 +69,7 @@ func (c *Controller) createServiceAccount(memcached *tapi.Memcached) error {
 	return err
 }
 
-func (c *Controller) deleteRoleBinding(memcached *tapi.Memcached) error {
+func (c *Controller) deleteRoleBinding(memcached *api.Memcached) error {
 	// Delete existing RoleBindings
 	if err := c.Client.RbacV1beta1().RoleBindings(memcached.Namespace).Delete(memcached.OffshootName(), nil); err != nil {
 		if !kerr.IsNotFound(err) {
@@ -79,9 +79,9 @@ func (c *Controller) deleteRoleBinding(memcached *tapi.Memcached) error {
 	return nil
 }
 
-func (c *Controller) createRoleBinding(memcached *tapi.Memcached) error {
+func (c *Controller) createRoleBinding(memcached *api.Memcached) error {
 	// Ensure new RoleBindings
-	_, err := kutilrbac.CreateOrPatchRoleBinding(
+	_, err := rbac_util.CreateOrPatchRoleBinding(
 		c.Client,
 		metav1.ObjectMeta{
 			Name:      memcached.OffshootName(),
@@ -106,7 +106,7 @@ func (c *Controller) createRoleBinding(memcached *tapi.Memcached) error {
 	return err
 }
 
-func (c *Controller) createRBACStuff(memcached *tapi.Memcached) error {
+func (c *Controller) createRBACStuff(memcached *api.Memcached) error {
 	// Delete Existing Role
 	if err := c.deleteRole(memcached); err != nil {
 		return err
@@ -133,7 +133,7 @@ func (c *Controller) createRBACStuff(memcached *tapi.Memcached) error {
 	return nil
 }
 
-func (c *Controller) deleteRBACStuff(memcached *tapi.Memcached) error {
+func (c *Controller) deleteRBACStuff(memcached *api.Memcached) error {
 	// Delete Existing Role
 	if err := c.deleteRole(memcached); err != nil {
 		return err

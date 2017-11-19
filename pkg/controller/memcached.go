@@ -6,8 +6,8 @@ import (
 	"reflect"
 
 	"github.com/appscode/go/log"
-	tapi "github.com/k8sdb/apimachinery/apis/kubedb/v1alpha1"
-	kutildb "github.com/k8sdb/apimachinery/client/typed/kubedb/v1alpha1/util"
+	api "github.com/k8sdb/apimachinery/apis/kubedb/v1alpha1"
+	"github.com/k8sdb/apimachinery/client/typed/kubedb/v1alpha1/util"
 	"github.com/k8sdb/apimachinery/pkg/eventer"
 	"github.com/k8sdb/memcached/pkg/validator"
 	core "k8s.io/api/core/v1"
@@ -15,11 +15,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (c *Controller) create(memcached *tapi.Memcached) error {
-	_, err := kutildb.TryPatchMemcached(c.ExtClient, memcached.ObjectMeta, func(in *tapi.Memcached) *tapi.Memcached {
+func (c *Controller) create(memcached *api.Memcached) error {
+	_, err := util.TryPatchMemcached(c.ExtClient, memcached.ObjectMeta, func(in *api.Memcached) *api.Memcached {
 		t := metav1.Now()
 		in.Status.CreationTime = &t
-		in.Status.Phase = tapi.DatabasePhaseCreating
+		in.Status.Phase = api.DatabasePhaseCreating
 		return in
 	})
 
@@ -58,7 +58,7 @@ func (c *Controller) create(memcached *tapi.Memcached) error {
 			)
 		}
 
-		_, err := kutildb.TryPatchDormantDatabase(c.ExtClient, memcached.ObjectMeta, func(in *tapi.DormantDatabase) *tapi.DormantDatabase {
+		_, err := util.TryPatchDormantDatabase(c.ExtClient, memcached.ObjectMeta, func(in *api.DormantDatabase) *api.DormantDatabase {
 			in.Spec.Resume = true
 			return in
 		})
@@ -111,7 +111,7 @@ func (c *Controller) create(memcached *tapi.Memcached) error {
 	return nil
 }
 
-func (c *Controller) matchDormantDatabase(memcached *tapi.Memcached) (bool, error) {
+func (c *Controller) matchDormantDatabase(memcached *api.Memcached) (bool, error) {
 	// Check if DormantDatabase exists or not
 	dormantDb, err := c.ExtClient.DormantDatabases(memcached.Namespace).Get(memcached.Name, metav1.GetOptions{})
 	if err != nil {
@@ -140,7 +140,7 @@ func (c *Controller) matchDormantDatabase(memcached *tapi.Memcached) (bool, erro
 	}
 
 	// Check DatabaseKind
-	if dormantDb.Labels[tapi.LabelDatabaseKind] != tapi.ResourceKindMemcached {
+	if dormantDb.Labels[api.LabelDatabaseKind] != api.ResourceKindMemcached {
 		return sendEvent(fmt.Sprintf(`Invalid Memcached: "%v". Exists DormantDatabase "%v" of different Kind`,
 			memcached.Name, dormantDb.Name))
 	}
@@ -156,7 +156,7 @@ func (c *Controller) matchDormantDatabase(memcached *tapi.Memcached) (bool, erro
 	return true, nil
 }
 
-func (c *Controller) ensureService(memcached *tapi.Memcached) error {
+func (c *Controller) ensureService(memcached *api.Memcached) error {
 	// Check if service name exists
 	found, err := c.findService(memcached)
 	if err != nil {
@@ -180,7 +180,7 @@ func (c *Controller) ensureService(memcached *tapi.Memcached) error {
 	return nil
 }
 
-func (c *Controller) ensureDeployment(memcached *tapi.Memcached) error {
+func (c *Controller) ensureDeployment(memcached *api.Memcached) error {
 	found, err := c.findDeployment(memcached)
 	if err != nil {
 		return err
@@ -227,8 +227,8 @@ func (c *Controller) ensureDeployment(memcached *tapi.Memcached) error {
 		)
 	}
 
-	_, err = kutildb.TryPatchMemcached(c.ExtClient, memcached.ObjectMeta, func(in *tapi.Memcached) *tapi.Memcached {
-		in.Status.Phase = tapi.DatabasePhaseRunning
+	_, err = util.TryPatchMemcached(c.ExtClient, memcached.ObjectMeta, func(in *api.Memcached) *api.Memcached {
+		in.Status.Phase = api.DatabasePhaseRunning
 		return in
 	})
 	if err != nil {
@@ -238,7 +238,7 @@ func (c *Controller) ensureDeployment(memcached *tapi.Memcached) error {
 	return nil
 }
 
-func (c *Controller) pause(memcached *tapi.Memcached) error {
+func (c *Controller) pause(memcached *api.Memcached) error {
 	if memcached.Annotations != nil {
 		if val, found := memcached.Annotations["kubedb.com/ignore"]; found {
 			//TODO: Add Event Reason "Ignored"
@@ -313,7 +313,7 @@ func (c *Controller) pause(memcached *tapi.Memcached) error {
 	return nil
 }
 
-func (c *Controller) update(oldMemcached, updatedMemcached *tapi.Memcached) error {
+func (c *Controller) update(oldMemcached, updatedMemcached *api.Memcached) error {
 	if err := validator.ValidateMemcached(c.Client, updatedMemcached); err != nil {
 		c.recorder.Event(updatedMemcached.ObjectReference(), core.EventTypeWarning, eventer.EventReasonInvalid, err.Error())
 		return err

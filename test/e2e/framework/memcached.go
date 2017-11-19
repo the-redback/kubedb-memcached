@@ -5,15 +5,15 @@ import (
 
 	"github.com/appscode/go/crypto/rand"
 	"github.com/appscode/go/encoding/json/types"
-	tapi "github.com/k8sdb/apimachinery/apis/kubedb/v1alpha1"
-	kutildb "github.com/k8sdb/apimachinery/client/typed/kubedb/v1alpha1/util"
+	api "github.com/k8sdb/apimachinery/apis/kubedb/v1alpha1"
+	"github.com/k8sdb/apimachinery/client/typed/kubedb/v1alpha1/util"
 	. "github.com/onsi/gomega"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (f *Invocation) Memcached() *tapi.Memcached {
-	return &tapi.Memcached{
+func (f *Invocation) Memcached() *api.Memcached {
+	return &api.Memcached{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      rand.WithUniqSuffix("memcached"),
 			Namespace: f.namespace,
@@ -21,23 +21,23 @@ func (f *Invocation) Memcached() *tapi.Memcached {
 				"app": f.app,
 			},
 		},
-		Spec: tapi.MemcachedSpec{
+		Spec: api.MemcachedSpec{
 			Version: types.StrYo("1.5.3-alpine"),
 		},
 	}
 }
 
-func (f *Framework) CreateMemcached(obj *tapi.Memcached) error {
+func (f *Framework) CreateMemcached(obj *api.Memcached) error {
 	_, err := f.extClient.Memcacheds(obj.Namespace).Create(obj)
 	return err
 }
 
-func (f *Framework) GetMemcached(meta metav1.ObjectMeta) (*tapi.Memcached, error) {
+func (f *Framework) GetMemcached(meta metav1.ObjectMeta) (*api.Memcached, error) {
 	return f.extClient.Memcacheds(meta.Namespace).Get(meta.Name, metav1.GetOptions{})
 }
 
-func (f *Framework) TryPatchMemcached(meta metav1.ObjectMeta, transform func(*tapi.Memcached) *tapi.Memcached) (*tapi.Memcached, error) {
-	return kutildb.TryPatchMemcached(f.extClient, meta, transform)
+func (f *Framework) TryPatchMemcached(meta metav1.ObjectMeta, transform func(*api.Memcached) *api.Memcached) (*api.Memcached, error) {
+	return util.TryPatchMemcached(f.extClient, meta, transform)
 }
 
 func (f *Framework) DeleteMemcached(meta metav1.ObjectMeta) error {
@@ -67,7 +67,7 @@ func (f *Framework) EventuallyMemcachedRunning(meta metav1.ObjectMeta) GomegaAsy
 		func() bool {
 			memcached, err := f.extClient.Memcacheds(meta.Namespace).Get(meta.Name, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
-			return memcached.Status.Phase == tapi.DatabasePhaseRunning
+			return memcached.Status.Phase == api.DatabasePhaseRunning
 		},
 		time.Minute*5,
 		time.Second*5,

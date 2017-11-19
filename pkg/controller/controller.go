@@ -7,9 +7,9 @@ import (
 	"github.com/appscode/go/hold"
 	"github.com/appscode/go/log"
 	pcm "github.com/coreos/prometheus-operator/pkg/client/monitoring/v1"
-	tapi "github.com/k8sdb/apimachinery/apis/kubedb/v1alpha1"
-	tcs "github.com/k8sdb/apimachinery/client/typed/kubedb/v1alpha1"
-	kutildb "github.com/k8sdb/apimachinery/client/typed/kubedb/v1alpha1/util"
+	api "github.com/k8sdb/apimachinery/apis/kubedb/v1alpha1"
+	cs "github.com/k8sdb/apimachinery/client/typed/kubedb/v1alpha1"
+	"github.com/k8sdb/apimachinery/client/typed/kubedb/v1alpha1/util"
 	amc "github.com/k8sdb/apimachinery/pkg/controller"
 	"github.com/k8sdb/apimachinery/pkg/eventer"
 	core "k8s.io/api/core/v1"
@@ -60,7 +60,7 @@ var _ amc.Deleter = &Controller{}
 func New(
 	client kubernetes.Interface,
 	apiExtKubeClient apiext_cs.ApiextensionsV1beta1Interface,
-	extClient tcs.KubedbV1alpha1Interface,
+	extClient cs.KubedbV1alpha1Interface,
 	promClient pcm.MonitoringV1Interface,
 	cronController amc.CronControllerInterface,
 	opt Options,
@@ -112,12 +112,12 @@ func (c *Controller) watchMemcached() {
 
 	_, cacheController := cache.NewInformer(
 		lw,
-		&tapi.Memcached{},
+		&api.Memcached{},
 		c.syncPeriod,
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
-				memcached := obj.(*tapi.Memcached)
-				kutildb.AssignTypeKind(memcached)
+				memcached := obj.(*api.Memcached)
+				util.AssignTypeKind(memcached)
 				if memcached.Status.CreationTime == nil {
 					if err := c.create(memcached); err != nil {
 						log.Errorln(err)
@@ -126,23 +126,23 @@ func (c *Controller) watchMemcached() {
 				}
 			},
 			DeleteFunc: func(obj interface{}) {
-				memcached := obj.(*tapi.Memcached)
-				kutildb.AssignTypeKind(memcached)
+				memcached := obj.(*api.Memcached)
+				util.AssignTypeKind(memcached)
 				if err := c.pause(memcached); err != nil {
 					log.Errorln(err)
 				}
 			},
 			UpdateFunc: func(old, new interface{}) {
-				oldObj, ok := old.(*tapi.Memcached)
+				oldObj, ok := old.(*api.Memcached)
 				if !ok {
 					return
 				}
-				newObj, ok := new.(*tapi.Memcached)
+				newObj, ok := new.(*api.Memcached)
 				if !ok {
 					return
 				}
-				kutildb.AssignTypeKind(oldObj)
-				kutildb.AssignTypeKind(newObj)
+				util.AssignTypeKind(oldObj)
+				util.AssignTypeKind(newObj)
 				if !reflect.DeepEqual(oldObj.Spec, newObj.Spec) {
 					if err := c.update(oldObj, newObj); err != nil {
 						log.Errorln(err)
@@ -156,7 +156,7 @@ func (c *Controller) watchMemcached() {
 
 func (c *Controller) watchDeletedDatabase() {
 	labelMap := map[string]string{
-		tapi.LabelDatabaseKind: tapi.ResourceKindMemcached,
+		api.LabelDatabaseKind: api.ResourceKindMemcached,
 	}
 	// Watch with label selector
 	lw := &cache.ListWatch{
@@ -180,7 +180,7 @@ func (c *Controller) watchDeletedDatabase() {
 func (c *Controller) ensureCustomResourceDefinition() {
 	log.Infoln("Ensuring CustomResourceDefinition...")
 
-	resourceName := tapi.ResourceTypeMemcached + "." + tapi.SchemeGroupVersion.Group
+	resourceName := api.ResourceTypeMemcached + "." + api.SchemeGroupVersion.Group
 	if _, err := c.ApiExtKubeClient.CustomResourceDefinitions().Get(resourceName, metav1.GetOptions{}); err != nil {
 		if !kerr.IsNotFound(err) {
 			log.Fatalln(err)
@@ -197,13 +197,13 @@ func (c *Controller) ensureCustomResourceDefinition() {
 			},
 		},
 		Spec: apiext_api.CustomResourceDefinitionSpec{
-			Group:   tapi.SchemeGroupVersion.Group,
-			Version: tapi.SchemeGroupVersion.Version,
+			Group:   api.SchemeGroupVersion.Group,
+			Version: api.SchemeGroupVersion.Version,
 			Scope:   apiext_api.NamespaceScoped,
 			Names: apiext_api.CustomResourceDefinitionNames{
-				Plural:     tapi.ResourceTypeMemcached,
-				Kind:       tapi.ResourceKindMemcached,
-				ShortNames: []string{tapi.ResourceCodeMemcached},
+				Plural:     api.ResourceTypeMemcached,
+				Kind:       api.ResourceKindMemcached,
+				ShortNames: []string{api.ResourceCodeMemcached},
 			},
 		},
 	}
@@ -213,7 +213,7 @@ func (c *Controller) ensureCustomResourceDefinition() {
 	}
 }
 
-func (c *Controller) pushFailureEvent(memcached *tapi.Memcached, reason string) {
+func (c *Controller) pushFailureEvent(memcached *api.Memcached, reason string) {
 	c.recorder.Eventf(
 		memcached.ObjectReference(),
 		core.EventTypeWarning,
@@ -223,8 +223,8 @@ func (c *Controller) pushFailureEvent(memcached *tapi.Memcached, reason string) 
 		reason,
 	)
 
-	_, err := kutildb.TryPatchMemcached(c.ExtClient, memcached.ObjectMeta, func(in *tapi.Memcached) *tapi.Memcached {
-		in.Status.Phase = tapi.DatabasePhaseFailed
+	_, err := util.TryPatchMemcached(c.ExtClient, memcached.ObjectMeta, func(in *api.Memcached) *api.Memcached {
+		in.Status.Phase = api.DatabasePhaseFailed
 		in.Status.Reason = reason
 		return in
 	})

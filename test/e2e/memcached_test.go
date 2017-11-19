@@ -3,7 +3,7 @@ package e2e_test
 import (
 	"fmt"
 
-	tapi "github.com/k8sdb/apimachinery/apis/kubedb/v1alpha1"
+	api "github.com/k8sdb/apimachinery/apis/kubedb/v1alpha1"
 	"github.com/k8sdb/memcached/test/e2e/framework"
 	"github.com/k8sdb/memcached/test/e2e/matcher"
 	. "github.com/onsi/ginkgo"
@@ -14,7 +14,7 @@ var _ = Describe("Memcached", func() {
 	var (
 		err         error
 		f           *framework.Invocation
-		memcached   *tapi.Memcached
+		memcached   *api.Memcached
 		skipMessage string
 	)
 
@@ -42,7 +42,7 @@ var _ = Describe("Memcached", func() {
 		f.EventuallyDormantDatabaseStatus(memcached.ObjectMeta).Should(matcher.HavePaused())
 
 		By("WipeOut memcached")
-		_, err := f.TryPatchDormantDatabase(memcached.ObjectMeta, func(in *tapi.DormantDatabase) *tapi.DormantDatabase {
+		_, err := f.TryPatchDormantDatabase(memcached.ObjectMeta, func(in *api.DormantDatabase) *api.DormantDatabase {
 			in.Spec.WipeOut = true
 			return in
 		})
@@ -102,7 +102,7 @@ var _ = Describe("Memcached", func() {
 				f.EventuallyMemcachedRunning(memcached.ObjectMeta).Should(BeTrue())
 
 				By("Update memcached to set DoNotPause=false")
-				f.TryPatchMemcached(memcached.ObjectMeta, func(in *tapi.Memcached) *tapi.Memcached {
+				f.TryPatchMemcached(memcached.ObjectMeta, func(in *api.Memcached) *api.Memcached {
 					in.Spec.DoNotPause = false
 					return in
 				})
@@ -128,7 +128,7 @@ var _ = Describe("Memcached", func() {
 				By("Wait for memcached to be paused")
 				f.EventuallyDormantDatabaseStatus(memcached.ObjectMeta).Should(matcher.HavePaused())
 
-				_, err = f.TryPatchDormantDatabase(memcached.ObjectMeta, func(in *tapi.DormantDatabase) *tapi.DormantDatabase {
+				_, err = f.TryPatchDormantDatabase(memcached.ObjectMeta, func(in *api.DormantDatabase) *api.DormantDatabase {
 					in.Spec.Resume = true
 					return in
 				})

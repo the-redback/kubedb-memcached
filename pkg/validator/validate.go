@@ -3,13 +3,13 @@ package validator
 import (
 	"fmt"
 
-	tapi "github.com/k8sdb/apimachinery/apis/kubedb/v1alpha1"
+	api "github.com/k8sdb/apimachinery/apis/kubedb/v1alpha1"
 	"github.com/k8sdb/apimachinery/pkg/docker"
 	amv "github.com/k8sdb/apimachinery/pkg/validator"
 	"k8s.io/client-go/kubernetes"
 )
 
-func ValidateMemcached(client kubernetes.Interface, memcached *tapi.Memcached) error {
+func ValidateMemcached(client kubernetes.Interface, memcached *api.Memcached) error {
 	if memcached.Spec.Version == "" {
 		return fmt.Errorf(`Object 'Version' is missing in '%v'`, memcached.Spec)
 	}

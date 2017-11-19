@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/appscode/go/types"
-	tapi "github.com/k8sdb/apimachinery/apis/kubedb/v1alpha1"
+	api "github.com/k8sdb/apimachinery/apis/kubedb/v1alpha1"
 	"github.com/k8sdb/apimachinery/pkg/docker"
 	apps "k8s.io/api/apps/v1beta1"
 	core "k8s.io/api/core/v1"
@@ -21,7 +21,7 @@ const (
 	durationCheckDeployment = time.Minute * 30
 )
 
-func (c *Controller) findService(memcached *tapi.Memcached) (bool, error) {
+func (c *Controller) findService(memcached *api.Memcached) (bool, error) {
 	name := memcached.OffshootName()
 	service, err := c.Client.CoreV1().Services(memcached.Namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
@@ -32,14 +32,14 @@ func (c *Controller) findService(memcached *tapi.Memcached) (bool, error) {
 		}
 	}
 
-	if service.Spec.Selector[tapi.LabelDatabaseName] != name {
+	if service.Spec.Selector[api.LabelDatabaseName] != name {
 		return false, fmt.Errorf(`Intended service "%v" already exists`, name)
 	}
 
 	return true, nil
 }
 
-func (c *Controller) createService(memcached *tapi.Memcached) error {
+func (c *Controller) createService(memcached *api.Memcached) error {
 	svc := &core.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   memcached.OffshootName(),
@@ -57,12 +57,12 @@ func (c *Controller) createService(memcached *tapi.Memcached) error {
 		},
 	}
 	if memcached.Spec.Monitor != nil &&
-		memcached.Spec.Monitor.Agent == tapi.AgentCoreosPrometheus &&
+		memcached.Spec.Monitor.Agent == api.AgentCoreosPrometheus &&
 		memcached.Spec.Monitor.Prometheus != nil {
 		svc.Spec.Ports = append(svc.Spec.Ports, core.ServicePort{
-			Name:       tapi.PrometheusExporterPortName,
-			Port:       tapi.PrometheusExporterPortNumber,
-			TargetPort: intstr.FromString(tapi.PrometheusExporterPortName),
+			Name:       api.PrometheusExporterPortName,
+			Port:       api.PrometheusExporterPortNumber,
+			TargetPort: intstr.FromString(api.PrometheusExporterPortName),
 		})
 	}
 
@@ -73,7 +73,7 @@ func (c *Controller) createService(memcached *tapi.Memcached) error {
 	return nil
 }
 
-func (c *Controller) findDeployment(memcached *tapi.Memcached) (bool, error) {
+func (c *Controller) findDeployment(memcached *api.Memcached) (bool, error) {
 	// Deployment for Memcached database
 	deployment, err := c.Client.AppsV1beta1().Deployments(memcached.Namespace).Get(memcached.OffshootName(), metav1.GetOptions{})
 	if err != nil {
@@ -84,14 +84,14 @@ func (c *Controller) findDeployment(memcached *tapi.Memcached) (bool, error) {
 		}
 	}
 
-	if deployment.Labels[tapi.LabelDatabaseKind] != tapi.ResourceKindMemcached {
+	if deployment.Labels[api.LabelDatabaseKind] != api.ResourceKindMemcached {
 		return false, fmt.Errorf(`intended deployment "%v" already exists`, memcached.OffshootName())
 	}
 
 	return true, nil
 }
 
-func (c *Controller) createDeployment(memcached *tapi.Memcached) (*apps.Deployment, error) {
+func (c *Controller) createDeployment(memcached *api.Memcached) (*apps.Deployment, error) {
 	// Deployment for Memcached database
 	if memcached.Spec.Replicas == 0 {
 		memcached.Spec.Replicas = 1
@@ -112,7 +112,7 @@ func (c *Controller) createDeployment(memcached *tapi.Memcached) (*apps.Deployme
 				Spec: core.PodSpec{
 					Containers: []core.Container{
 						{
-							Name:            tapi.ResourceNameMemcached,
+							Name:            api.ResourceNameMemcached,
 							Image:           fmt.Sprintf("%s:%s", docker.ImageMemcached, memcached.Spec.Version),
 							ImagePullPolicy: core.PullIfNotPresent,
 							Ports: []core.ContainerPort{
@@ -134,22 +134,22 @@ func (c *Controller) createDeployment(memcached *tapi.Memcached) (*apps.Deployme
 	}
 
 	if memcached.Spec.Monitor != nil &&
-		memcached.Spec.Monitor.Agent == tapi.AgentCoreosPrometheus &&
+		memcached.Spec.Monitor.Agent == api.AgentCoreosPrometheus &&
 		memcached.Spec.Monitor.Prometheus != nil {
 		exporter := core.Container{
 			Name: "exporter",
 			Args: []string{
 				"export",
-				fmt.Sprintf("--address=:%d", tapi.PrometheusExporterPortNumber),
+				fmt.Sprintf("--address=:%d", api.PrometheusExporterPortNumber),
 				"--v=3",
 			},
 			Image:           docker.ImageOperator + ":" + c.opt.ExporterTag,
 			ImagePullPolicy: core.PullIfNotPresent,
 			Ports: []core.ContainerPort{
 				{
-					Name:          tapi.PrometheusExporterPortName,
+					Name:          api.PrometheusExporterPortName,
 					Protocol:      core.ProtocolTCP,
-					ContainerPort: int32(tapi.PrometheusExporterPortNumber),
+					ContainerPort: int32(api.PrometheusExporterPortNumber),
 				},
 			},
 		}
@@ -172,24 +172,24 @@ func (c *Controller) createDeployment(memcached *tapi.Memcached) (*apps.Deployme
 	return deployment, nil
 }
 
-func (c *Controller) createDormantDatabase(memcached *tapi.Memcached) (*tapi.DormantDatabase, error) {
-	dormantDb := &tapi.DormantDatabase{
+func (c *Controller) createDormantDatabase(memcached *api.Memcached) (*api.DormantDatabase, error) {
+	dormantDb := &api.DormantDatabase{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      memcached.Name,
 			Namespace: memcached.Namespace,
 			Labels: map[string]string{
-				tapi.LabelDatabaseKind: tapi.ResourceKindMemcached,
+				api.LabelDatabaseKind: api.ResourceKindMemcached,
 			},
 		},
-		Spec: tapi.DormantDatabaseSpec{
-			Origin: tapi.Origin{
+		Spec: api.DormantDatabaseSpec{
+			Origin: api.Origin{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        memcached.Name,
 					Namespace:   memcached.Namespace,
 					Labels:      memcached.Labels,
 					Annotations: memcached.Annotations,
 				},
-				Spec: tapi.OriginSpec{
+				Spec: api.OriginSpec{
 					Memcached: &memcached.Spec,
 				},
 			},
@@ -199,8 +199,8 @@ func (c *Controller) createDormantDatabase(memcached *tapi.Memcached) (*tapi.Dor
 	return c.ExtClient.DormantDatabases(dormantDb.Namespace).Create(dormantDb)
 }
 
-func (c *Controller) reCreateMemcached(memcached *tapi.Memcached) error {
-	_memcached := &tapi.Memcached{
+func (c *Controller) reCreateMemcached(memcached *api.Memcached) error {
+	_memcached := &api.Memcached{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        memcached.Name,
 			Namespace:   memcached.Namespace,
