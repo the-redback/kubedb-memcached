@@ -13,8 +13,8 @@ import (
 	amc "github.com/k8sdb/apimachinery/pkg/controller"
 	"github.com/k8sdb/apimachinery/pkg/eventer"
 	core "k8s.io/api/core/v1"
-	extensionsobj "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1beta1"
+	apiext_api "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apiext_cs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1beta1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -42,7 +42,7 @@ type Options struct {
 type Controller struct {
 	*amc.Controller
 	// Api Extension Client
-	ApiExtKubeClient apiextensionsclient.ApiextensionsV1beta1Interface
+	ApiExtKubeClient apiext_cs.ApiextensionsV1beta1Interface
 	// Prometheus client
 	promClient pcm.MonitoringV1Interface
 	// Cron Controller
@@ -55,12 +55,11 @@ type Controller struct {
 	syncPeriod time.Duration
 }
 
-var _ amc.Snapshotter = &Controller{}
 var _ amc.Deleter = &Controller{}
 
 func New(
 	client kubernetes.Interface,
-	apiExtKubeClient apiextensionsclient.ApiextensionsV1beta1Interface,
+	apiExtKubeClient apiext_cs.ApiextensionsV1beta1Interface,
 	extClient tcs.KubedbV1alpha1Interface,
 	promClient pcm.MonitoringV1Interface,
 	cronController amc.CronControllerInterface,
@@ -74,10 +73,9 @@ func New(
 		ApiExtKubeClient: apiExtKubeClient,
 		promClient:       promClient,
 		cronController:   cronController,
-		// TODO
-		recorder:   eventer.NewEventRecorder(client, "Memcached operator"),
-		opt:        opt,
-		syncPeriod: time.Minute * 2,
+		recorder:         eventer.NewEventRecorder(client, "Memcached operator"),
+		opt:              opt,
+		syncPeriod:       time.Minute * 2,
 	}
 }
 
@@ -86,19 +84,10 @@ func (c *Controller) Run() {
 	// Ensure TPR
 	c.ensureCustomResourceDefinition()
 
-	// Start Cron
-	c.cronController.StartCron()
-	// Stop Cron
-	defer c.cronController.StopCron()
-
 	// Watch x  TPR objects
 	go c.watchMemcached()
-	// Watch DatabaseSnapshot with labelSelector only for Memcached
-	go c.watchDatabaseSnapshot()
 	// Watch DeletedDatabase with labelSelector only for Memcached
 	go c.watchDeletedDatabase()
-	// hold
-	hold.Hold()
 }
 
 // Blocks caller. Intended to be called as a Go routine.
@@ -165,33 +154,8 @@ func (c *Controller) watchMemcached() {
 	cacheController.Run(wait.NeverStop)
 }
 
-func (c *Controller) watchDatabaseSnapshot() {
-	labelMap := map[string]string{
-		// TODO: Use appropriate ResourceKind.
-		tapi.LabelDatabaseKind: tapi.ResourceKindMemcached,
-	}
-	// Watch with label selector
-	lw := &cache.ListWatch{
-		ListFunc: func(opts metav1.ListOptions) (runtime.Object, error) {
-			return c.ExtClient.Snapshots(metav1.NamespaceAll).List(
-				metav1.ListOptions{
-					LabelSelector: labels.SelectorFromSet(labelMap).String(),
-				})
-		},
-		WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
-			return c.ExtClient.Snapshots(metav1.NamespaceAll).Watch(
-				metav1.ListOptions{
-					LabelSelector: labels.SelectorFromSet(labelMap).String(),
-				})
-		},
-	}
-
-	amc.NewSnapshotController(c.Client, c.ApiExtKubeClient, c.ExtClient, c, lw, c.syncPeriod).Run()
-}
-
 func (c *Controller) watchDeletedDatabase() {
 	labelMap := map[string]string{
-		// TODO: Use appropriate ResourceKind.
 		tapi.LabelDatabaseKind: tapi.ResourceKindMemcached,
 	}
 	// Watch with label selector
@@ -216,7 +180,6 @@ func (c *Controller) watchDeletedDatabase() {
 func (c *Controller) ensureCustomResourceDefinition() {
 	log.Infoln("Ensuring CustomResourceDefinition...")
 
-	// TODO: Use appropriate ResourceType.
 	resourceName := tapi.ResourceTypeMemcached + "." + tapi.SchemeGroupVersion.Group
 	if _, err := c.ApiExtKubeClient.CustomResourceDefinitions().Get(resourceName, metav1.GetOptions{}); err != nil {
 		if !kerr.IsNotFound(err) {
@@ -226,19 +189,18 @@ func (c *Controller) ensureCustomResourceDefinition() {
 		return
 	}
 
-	crd := &extensionsobj.CustomResourceDefinition{
+	crd := &apiext_api.CustomResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: resourceName,
 			Labels: map[string]string{
 				"app": "kubedb",
 			},
 		},
-		Spec: extensionsobj.CustomResourceDefinitionSpec{
+		Spec: apiext_api.CustomResourceDefinitionSpec{
 			Group:   tapi.SchemeGroupVersion.Group,
 			Version: tapi.SchemeGroupVersion.Version,
-			Scope:   extensionsobj.NamespaceScoped,
-			Names: extensionsobj.CustomResourceDefinitionNames{
-				// TODO: Use appropriate const.
+			Scope:   apiext_api.NamespaceScoped,
+			Names: apiext_api.CustomResourceDefinitionNames{
 				Plural:     tapi.ResourceTypeMemcached,
 				Kind:       tapi.ResourceKindMemcached,
 				ShortNames: []string{tapi.ResourceCodeMemcached},
