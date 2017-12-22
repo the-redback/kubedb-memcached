@@ -1,11 +1,11 @@
 package controller
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 
 	"github.com/appscode/go/log"
+	"github.com/appscode/kutil"
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	"github.com/kubedb/apimachinery/client/typed/kubedb/v1alpha1/util"
 	"github.com/kubedb/apimachinery/pkg/eventer"
@@ -16,97 +16,112 @@ import (
 )
 
 func (c *Controller) create(memcached *api.Memcached) error {
-	_, err := util.TryPatchMemcached(c.ExtClient, memcached.ObjectMeta, func(in *api.Memcached) *api.Memcached {
-		t := metav1.Now()
-		in.Status.CreationTime = &t
-		in.Status.Phase = api.DatabasePhaseCreating
-		return in
-	})
-
-	if err != nil {
-		c.recorder.Eventf(memcached.ObjectReference(), core.EventTypeWarning, eventer.EventReasonFailedToUpdate, err.Error())
-		return err
-	}
-
-	if err := validator.ValidateMemcached(c.Client, memcached); err != nil {
-		c.recorder.Event(memcached.ObjectReference(), core.EventTypeWarning, eventer.EventReasonInvalid, err.Error())
-		return err
-	}
-	// Event for successful validation
-	c.recorder.Event(
-		memcached.ObjectReference(),
-		core.EventTypeNormal,
-		eventer.EventReasonSuccessfulValidate,
-		"Successfully validate Memcached",
-	)
-
-	// Check DormantDatabase
-	matched, err := c.matchDormantDatabase(memcached)
-	if err != nil {
-		return err
-	}
-	if matched {
-		memcached.Annotations = map[string]string{
-			"kubedb.com/ignore": "",
-		}
-		if err := c.ExtClient.Memcacheds(memcached.Namespace).Delete(memcached.Name, &metav1.DeleteOptions{}); err != nil {
-			return fmt.Errorf(
-				`Failed to resume Memcached "%v" from DormantDatabase "%v". Error: %v`,
-				memcached.Name,
-				memcached.Name,
-				err,
-			)
-		}
-
-		_, err := util.TryPatchDormantDatabase(c.ExtClient, memcached.ObjectMeta, func(in *api.DormantDatabase) *api.DormantDatabase {
-			in.Spec.Resume = true
+	if memcached.Status.CreationTime == nil {
+		mc, _, err := util.PatchMemcached(c.ExtClient, memcached, func(in *api.Memcached) *api.Memcached {
+			t := metav1.Now()
+			in.Status.CreationTime = &t
+			in.Status.Phase = api.DatabasePhaseCreating
 			return in
 		})
 		if err != nil {
-			c.recorder.Eventf(memcached.ObjectReference(), core.EventTypeWarning, eventer.EventReasonFailedToUpdate, err.Error())
-			return err
-		}
-		return nil
-	}
-
-	// Event for notification that kubernetes objects are creating
-	c.recorder.Event(memcached.ObjectReference(), core.EventTypeNormal, eventer.EventReasonCreating, "Creating Kubernetes objects")
-
-	// ensure database Service
-	if err := c.ensureService(memcached); err != nil {
-		return err
-	}
-
-	// ensure database Deployment
-	if err := c.ensureDeployment(memcached); err != nil {
-		return err
-	}
-
-	c.recorder.Event(
-		memcached.ObjectReference(),
-		core.EventTypeNormal,
-		eventer.EventReasonSuccessfulCreate,
-		"Successfully created Memcached",
-	)
-
-	if memcached.Spec.Monitor != nil {
-		if err := c.addMonitor(memcached); err != nil {
 			c.recorder.Eventf(
 				memcached.ObjectReference(),
 				core.EventTypeWarning,
-				eventer.EventReasonFailedToCreate,
-				"Failed to add monitoring system. Reason: %v",
-				err,
+				eventer.EventReasonFailedToUpdate,
+				err.Error(),
 			)
-			log.Errorln(err)
-			return nil
+			return err
 		}
+		memcached.Status = mc.Status
+	}
+
+	if err := validator.ValidateMemcached(c.Client, memcached); err != nil {
+		c.recorder.Event(
+			memcached.ObjectReference(),
+			core.EventTypeWarning,
+			eventer.EventReasonInvalid,
+			err.Error(),
+		)
+		return nil
+	}
+
+	// Dynamic Defaulting
+	// Assign Default Monitoring Port
+	if err := c.setMonitoringPort(memcached); err != nil {
+		return err
+	}
+	// set replica to at least 1
+	if memcached.Spec.Replicas < 1 {
+		memcached.Spec.Replicas = 1
+	}
+
+	// Check DormantDatabase
+	if matched, err := c.matchDormantDatabase(memcached); err != nil || matched {
+		return err
+	}
+
+	// ensure database Service
+	ok1, er1 := c.ensureService(memcached)
+	if er1 != nil {
+		return er1
+	}
+
+	// ensure database Deployment
+	ok2, er2 := c.ensureDeployment(memcached)
+	if er2 != nil {
+		return er2
+	}
+
+	if ok1 == kutil.VerbCreated && ok2 == kutil.VerbCreated {
 		c.recorder.Event(
 			memcached.ObjectReference(),
 			core.EventTypeNormal,
-			eventer.EventReasonSuccessfulCreate,
-			"Successfully added monitoring system.",
+			eventer.EventReasonSuccessful,
+			"Successfully created Memcached",
 		)
+	} else if ok1 == kutil.VerbPatched || ok2 == kutil.VerbPatched {
+		c.recorder.Event(
+			memcached.ObjectReference(),
+			core.EventTypeNormal,
+			eventer.EventReasonSuccessful,
+			"Successfully patched Memcached",
+		)
+	}
+
+	if err := c.manageMonitor(memcached); err != nil {
+		c.recorder.Eventf(
+			memcached.ObjectReference(),
+			core.EventTypeWarning,
+			eventer.EventReasonFailedToCreate,
+			"Failed to manage monitoring system. Reason: %v",
+			err,
+		)
+		log.Errorln(err)
+		return nil
+	}
+	return nil
+}
+
+func (c *Controller) setMonitoringPort(memcached *api.Memcached) error {
+	if memcached.Spec.Monitor != nil &&
+		memcached.Spec.Monitor.Prometheus != nil {
+		if memcached.Spec.Monitor.Prometheus.Port == 0 {
+			mc, _, err := util.PatchMemcached(c.ExtClient, memcached, func(in *api.Memcached) *api.Memcached {
+				in.Spec.Monitor.Prometheus.Port = api.PrometheusExporterPortNumber
+				return in
+			})
+
+			if err != nil {
+				c.recorder.Eventf(
+					memcached.ObjectReference(),
+					core.EventTypeWarning,
+					eventer.EventReasonFailedToUpdate,
+					err.Error(),
+				)
+				return err
+			}
+			memcached.Spec = mc.Spec
+		}
 	}
 	return nil
 }
@@ -129,20 +144,20 @@ func (c *Controller) matchDormantDatabase(memcached *api.Memcached) (bool, error
 		return false, nil
 	}
 
-	var sendEvent = func(message string) (bool, error) {
-		c.recorder.Event(
+	var sendEvent = func(message string, args ...interface{}) (bool, error) {
+		c.recorder.Eventf(
 			memcached.ObjectReference(),
 			core.EventTypeWarning,
 			eventer.EventReasonFailedToCreate,
 			message,
+			args,
 		)
-		return false, errors.New(message)
+		return false, fmt.Errorf(message, args)
 	}
 
 	// Check DatabaseKind
 	if dormantDb.Labels[api.LabelDatabaseKind] != api.ResourceKindMemcached {
-		return sendEvent(fmt.Sprintf(`Invalid Memcached: "%v". Exists DormantDatabase "%v" of different Kind`,
-			memcached.Name, dormantDb.Name))
+		return sendEvent(fmt.Sprintf(`Invalid Memcached: "%v". Exists DormantDatabase "%v" of different Kind`, memcached.Name, dormantDb.Name))
 	}
 
 	// Check Origin Spec
@@ -153,124 +168,49 @@ func (c *Controller) matchDormantDatabase(memcached *api.Memcached) (bool, error
 		return sendEvent("Memcached spec mismatches with OriginSpec in DormantDatabases")
 	}
 
-	return true, nil
-}
-
-func (c *Controller) ensureService(memcached *api.Memcached) error {
-	// Check if service name exists
-	found, err := c.findService(memcached)
-	if err != nil {
-		return err
-	}
-	if found {
-		return nil
+	if err := c.ExtClient.Memcacheds(memcached.Namespace).Delete(memcached.Name, &metav1.DeleteOptions{}); err != nil {
+		return sendEvent(`failed to resume Memcached "%v" from DormantDatabase "%v". Error: %v`, memcached.Name, memcached.Name, err)
 	}
 
-	// create database Service
-	if err := c.createService(memcached); err != nil {
-		c.recorder.Eventf(
-			memcached.ObjectReference(),
-			core.EventTypeWarning,
-			eventer.EventReasonFailedToCreate,
-			"Failed to create Service. Reason: %v",
-			err,
-		)
-		return err
-	}
-	return nil
-}
-
-func (c *Controller) ensureDeployment(memcached *api.Memcached) error {
-	found, err := c.findDeployment(memcached)
-	if err != nil {
-		return err
-	}
-	if found {
-		return nil
-	}
-
-	// Create deployment for Memcached database
-	deployment, err := c.createDeployment(memcached)
-	if err != nil {
-		c.recorder.Eventf(
-			memcached.ObjectReference(),
-			core.EventTypeWarning,
-			eventer.EventReasonFailedToCreate,
-			"Failed to create Deployment. Reason: %v",
-			err,
-		)
-		return err
-	}
-
-	_memcached, err := c.ExtClient.Memcacheds(memcached.Namespace).Get(memcached.Name, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-	memcached = _memcached
-
-	// Check Deployment Pod status
-	if err := c.checkDeploymentPodStatus(deployment, durationCheckDeployment); err != nil {
-		c.recorder.Eventf(
-			memcached.ObjectReference(),
-			core.EventTypeWarning,
-			eventer.EventReasonFailedToStart,
-			`Failed to create Deployment. Reason: %v`,
-			err,
-		)
-		return err
-	} else {
-		c.recorder.Event(
-			memcached.ObjectReference(),
-			core.EventTypeNormal,
-			eventer.EventReasonSuccessfulCreate,
-			"Successfully created Deployment",
-		)
-	}
-
-	_, err = util.TryPatchMemcached(c.ExtClient, memcached.ObjectMeta, func(in *api.Memcached) *api.Memcached {
-		in.Status.Phase = api.DatabasePhaseRunning
+	_, _, err = util.PatchDormantDatabase(c.ExtClient, dormantDb, func(in *api.DormantDatabase) *api.DormantDatabase {
+		in.Spec.Resume = true
 		return in
 	})
 	if err != nil {
-		c.recorder.Eventf(memcached, core.EventTypeWarning, eventer.EventReasonFailedToUpdate, err.Error())
-		return err
-	}
-	return nil
-}
-
-func (c *Controller) pause(memcached *api.Memcached) error {
-	if memcached.Annotations != nil {
-		if val, found := memcached.Annotations["kubedb.com/ignore"]; found {
-			//TODO: Add Event Reason "Ignored"
-			c.recorder.Event(memcached.ObjectReference(), core.EventTypeNormal, "Ignored", val)
-			return nil
-		}
-	}
-
-	c.recorder.Event(memcached.ObjectReference(), core.EventTypeNormal, eventer.EventReasonPausing, "Pausing Memcached")
-
-	if memcached.Spec.DoNotPause {
 		c.recorder.Eventf(
 			memcached.ObjectReference(),
 			core.EventTypeWarning,
-			eventer.EventReasonFailedToPause,
-			`Memcached "%v" is locked.`,
-			memcached.Name,
+			eventer.EventReasonFailedToUpdate,
+			err.Error(),
 		)
-
-		if err := c.reCreateMemcached(memcached); err != nil {
-			c.recorder.Eventf(
-				memcached.ObjectReference(),
-				core.EventTypeWarning,
-				eventer.EventReasonFailedToCreate,
-				`Failed to recreate Memcached: "%v". Reason: %v`,
-				memcached.Name,
-				err,
-			)
-			return err
-		}
-		return nil
+		return sendEvent(err.Error())
 	}
+	return true, nil
+}
+
+func (c *Controller) pause(memcached *api.Memcached) error {
+	//if memcached.Spec.DoNotPause {
+	//	c.recorder.Eventf(
+	//		memcached.ObjectReference(),
+	//		core.EventTypeWarning,
+	//		eventer.EventReasonFailedToPause,
+	//		`Memcached "%v" is locked.`,
+	//		memcached.Name,
+	//	)
+	//
+	//	if err := c.reCreateMemcached(memcached); err != nil {
+	//		c.recorder.Eventf(
+	//			memcached.ObjectReference(),
+	//			core.EventTypeWarning,
+	//			eventer.EventReasonFailedToCreate,
+	//			`Failed to recreate Memcached: "%v". Reason: %v`,
+	//			memcached.Name,
+	//			err,
+	//		)
+	//		return err
+	//	}
+	//	return nil
+	//}
 
 	if _, err := c.createDormantDatabase(memcached); err != nil {
 		c.recorder.Eventf(
@@ -292,7 +232,7 @@ func (c *Controller) pause(memcached *api.Memcached) error {
 	)
 
 	if memcached.Spec.Monitor != nil {
-		if err := c.deleteMonitor(memcached); err != nil {
+		if vt, err := c.deleteMonitor(memcached); err != nil {
 			c.recorder.Eventf(
 				memcached.ObjectReference(),
 				core.EventTypeWarning,
@@ -302,56 +242,20 @@ func (c *Controller) pause(memcached *api.Memcached) error {
 			)
 			log.Errorln(err)
 			return nil
-		}
-		c.recorder.Event(
-			memcached.ObjectReference(),
-			core.EventTypeNormal,
-			eventer.EventReasonSuccessfulMonitorDelete,
-			"Successfully deleted monitoring system.",
-		)
-	}
-	return nil
-}
-
-func (c *Controller) update(oldMemcached, updatedMemcached *api.Memcached) error {
-	if err := validator.ValidateMemcached(c.Client, updatedMemcached); err != nil {
-		c.recorder.Event(updatedMemcached.ObjectReference(), core.EventTypeWarning, eventer.EventReasonInvalid, err.Error())
-		return err
-	}
-	// Event for successful validation
-	c.recorder.Event(
-		updatedMemcached.ObjectReference(),
-		core.EventTypeNormal,
-		eventer.EventReasonSuccessfulValidate,
-		"Successfully validate Memcached",
-	)
-
-	if err := c.ensureService(updatedMemcached); err != nil {
-		return err
-	}
-	if err := c.ensureDeployment(updatedMemcached); err != nil {
-		return err
-	}
-
-	if !reflect.DeepEqual(oldMemcached.Spec.Monitor, updatedMemcached.Spec.Monitor) {
-		if err := c.updateMonitor(oldMemcached, updatedMemcached); err != nil {
+		} else if vt != kutil.VerbUnchanged {
 			c.recorder.Eventf(
-				updatedMemcached.ObjectReference(),
-				core.EventTypeWarning,
-				eventer.EventReasonFailedToUpdate,
-				"Failed to update monitoring system. Reason: %v",
-				err,
+				memcached.ObjectReference(),
+				core.EventTypeNormal,
+				eventer.EventReasonSuccessfulMonitorDelete,
+				"Successfully %s monitoring system.",
+				vt,
 			)
-			log.Errorln(err)
-			return nil
 		}
-		c.recorder.Event(
-			updatedMemcached.ObjectReference(),
-			core.EventTypeNormal,
-			eventer.EventReasonSuccessfulMonitorUpdate,
-			"Successfully updated monitoring system.",
-		)
-
 	}
 	return nil
 }
+
+//func (c *Controller) reCreateMemcached(memcached *api.Memcached) error {
+//	//reCreateMemcached
+//	return nil
+//}

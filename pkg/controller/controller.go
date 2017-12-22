@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"reflect"
 	"time"
 
 	"github.com/appscode/go/hold"
@@ -18,12 +17,12 @@ import (
 	apiext_cs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/wait"
+	rt "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/workqueue"
 )
 
 type Options struct {
@@ -37,6 +36,8 @@ type Options struct {
 	Address string
 	// Enable RBAC for database workloads
 	EnableRbac bool
+	//Max number requests for retries
+	MaxNumRequeues int
 }
 
 type Controller struct {
@@ -53,6 +54,11 @@ type Controller struct {
 	opt Options
 	// sync time to sync the list.
 	syncPeriod time.Duration
+
+	// Workqueue
+	indexer  cache.Indexer
+	queue    workqueue.RateLimitingInterface
+	informer cache.Controller
 }
 
 var _ amc.Deleter = &Controller{}
@@ -75,7 +81,7 @@ func New(
 		cronController:   cronController,
 		recorder:         eventer.NewEventRecorder(client, "Memcached operator"),
 		opt:              opt,
-		syncPeriod:       time.Minute * 2,
+		syncPeriod:       time.Minute * 5,
 	}
 }
 
@@ -106,70 +112,13 @@ func (c *Controller) RunAndHold() {
 }
 
 func (c *Controller) watchMemcached() {
-	lw := &cache.ListWatch{
-		ListFunc: func(opts metav1.ListOptions) (runtime.Object, error) {
-			return c.ExtClient.Memcacheds(metav1.NamespaceAll).List(metav1.ListOptions{})
-		},
-		WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
-			return c.ExtClient.Memcacheds(metav1.NamespaceAll).Watch(metav1.ListOptions{})
-		},
-	}
+	c.initWatcher()
 
-	_, cacheController := cache.NewInformer(
-		lw,
-		&api.Memcached{},
-		c.syncPeriod,
-		cache.ResourceEventHandlerFuncs{
-			AddFunc: func(obj interface{}) {
-				memcached := obj.(*api.Memcached)
-				util.AssignTypeKind(memcached)
-				setMonitoringPort(memcached)
-				if memcached.Status.CreationTime == nil {
-					if err := c.create(memcached); err != nil {
-						log.Errorln(err)
-						c.pushFailureEvent(memcached, err.Error())
-					}
-				}
-			},
-			DeleteFunc: func(obj interface{}) {
-				memcached := obj.(*api.Memcached)
-				util.AssignTypeKind(memcached)
-				setMonitoringPort(memcached)
-				if err := c.pause(memcached); err != nil {
-					log.Errorln(err)
-				}
-			},
-			UpdateFunc: func(old, new interface{}) {
-				oldObj, ok := old.(*api.Memcached)
-				if !ok {
-					return
-				}
-				newObj, ok := new.(*api.Memcached)
-				if !ok {
-					return
-				}
-				util.AssignTypeKind(oldObj)
-				util.AssignTypeKind(newObj)
-				setMonitoringPort(oldObj)
-				setMonitoringPort(newObj)
-				if !reflect.DeepEqual(oldObj.Spec, newObj.Spec) {
-					if err := c.update(oldObj, newObj); err != nil {
-						log.Errorln(err)
-					}
-				}
-			},
-		},
-	)
-	cacheController.Run(wait.NeverStop)
-}
+	stop := make(chan struct{})
+	defer close(stop)
 
-func setMonitoringPort(memcached *api.Memcached) {
-	if memcached.Spec.Monitor != nil &&
-		memcached.Spec.Monitor.Prometheus != nil {
-		if memcached.Spec.Monitor.Prometheus.Port == 0 {
-			memcached.Spec.Monitor.Prometheus.Port = api.PrometheusExporterPortNumber
-		}
-	}
+	c.runWatcher(1, stop)
+	select {}
 }
 
 func (c *Controller) watchDeletedDatabase() {
@@ -178,7 +127,7 @@ func (c *Controller) watchDeletedDatabase() {
 	}
 	// Watch with label selector
 	lw := &cache.ListWatch{
-		ListFunc: func(opts metav1.ListOptions) (runtime.Object, error) {
+		ListFunc: func(opts metav1.ListOptions) (rt.Object, error) {
 			return c.ExtClient.DormantDatabases(metav1.NamespaceAll).List(
 				metav1.ListOptions{
 					LabelSelector: labels.SelectorFromSet(labelMap).String(),
