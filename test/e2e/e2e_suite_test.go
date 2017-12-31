@@ -11,8 +11,8 @@ import (
 	pcm "github.com/coreos/prometheus-operator/pkg/client/monitoring/v1"
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	cs "github.com/kubedb/apimachinery/client/typed/kubedb/v1alpha1"
-	amc "github.com/kubedb/apimachinery/pkg/controller"
 	"github.com/kubedb/memcached/pkg/controller"
+	"github.com/kubedb/memcached/pkg/docker"
 	"github.com/kubedb/memcached/test/e2e/framework"
 	"github.com/mitchellh/go-homedir"
 	. "github.com/onsi/ginkgo"
@@ -25,10 +25,12 @@ import (
 
 var storageClass string
 var exporterTag string
+var dockerRegistry string
 
 func init() {
 	flag.StringVar(&storageClass, "storageclass", "standard", "Kubernetes StorageClass name")
-	flag.StringVar(&exporterTag, "exporter-tag", "", "Tag of kubedb/operator used as exporter")
+	flag.StringVar(&exporterTag, "exporter-tag", "canary", "Tag of kubedb/operator used as exporter")
+	flag.StringVar(&dockerRegistry, "docker-registry", "kubedb", "User provided docker repository")
 }
 
 const (
@@ -65,7 +67,9 @@ var _ = BeforeSuite(func() {
 	apiExtKubeClient := crd_cs.NewForConfigOrDie(config)
 	extClient := cs.NewForConfigOrDie(config)
 	promClient, err := pcm.NewForConfig(config)
-
+	if err != nil {
+		log.Fatalln(err)
+	}
 	// Framework
 	root = framework.New(kubeClient, extClient, storageClass)
 
@@ -75,19 +79,18 @@ var _ = BeforeSuite(func() {
 	err = root.CreateNamespace()
 	Expect(err).NotTo(HaveOccurred())
 
-	cronController := amc.NewCronController(kubeClient, extClient)
-	// Start Cron
-	cronController.StartCron()
-
 	opt := controller.Options{
+		Docker: docker.Docker{
+			Registry:    dockerRegistry,
+			ExporterTag: exporterTag,
+		},
 		OperatorNamespace: root.Namespace(),
 		GoverningService:  api.DatabaseNamePrefix,
 		MaxNumRequeues:    5,
-		ExporterTag:       exporterTag,
 	}
 
 	// Controller
-	ctrl = controller.New(kubeClient, apiExtKubeClient, extClient, promClient, cronController, opt)
+	ctrl = controller.New(kubeClient, apiExtKubeClient, extClient, promClient, opt)
 	err = ctrl.Setup()
 	if err != nil {
 		log.Fatalln(err)
@@ -97,6 +100,8 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
+	root.CleanMemcached()
+	root.CleanDormantDatabase()
 	err := root.DeleteNamespace()
 	Expect(err).NotTo(HaveOccurred())
 	By("Deleted namespace")

@@ -16,7 +16,7 @@ import (
 )
 
 func (c *Controller) create(memcached *api.Memcached) error {
-	if err := validator.ValidateMemcached(c.Client, memcached); err != nil {
+	if err := validator.ValidateMemcached(c.Client, memcached, c.opt.Docker); err != nil {
 		c.recorder.Event(
 			memcached.ObjectReference(),
 			core.EventTypeWarning,
@@ -52,11 +52,24 @@ func (c *Controller) create(memcached *api.Memcached) error {
 	}
 	// set replica to at least 1
 	if memcached.Spec.Replicas < 1 {
-		memcached.Spec.Replicas = 1
+		mc, _, err := util.PatchMemcached(c.ExtClient, memcached, func(in *api.Memcached) *api.Memcached {
+			in.Spec.Replicas = 1
+			return in
+		})
+		if err != nil {
+			c.recorder.Eventf(
+				memcached.ObjectReference(),
+				core.EventTypeWarning,
+				eventer.EventReasonFailedToUpdate,
+				err.Error(),
+			)
+			return err
+		}
+		memcached.Spec = mc.Spec
 	}
 
 	// Check DormantDatabase
-	if matched, err := c.matchDormantDatabase(memcached); err != nil || matched {
+	if err := c.matchDormantDatabase(memcached); err != nil {
 		return err
 	}
 
@@ -126,7 +139,7 @@ func (c *Controller) setMonitoringPort(memcached *api.Memcached) error {
 	return nil
 }
 
-func (c *Controller) matchDormantDatabase(memcached *api.Memcached) (bool, error) {
+func (c *Controller) matchDormantDatabase(memcached *api.Memcached) error {
 	// Check if DormantDatabase exists or not
 	dormantDb, err := c.ExtClient.DormantDatabases(memcached.Namespace).Get(memcached.Name, metav1.GetOptions{})
 	if err != nil {
@@ -139,12 +152,12 @@ func (c *Controller) matchDormantDatabase(memcached *api.Memcached) (bool, error
 				memcached.Name,
 				err,
 			)
-			return false, err
+			return err
 		}
-		return false, nil
+		return nil
 	}
 
-	var sendEvent = func(message string, args ...interface{}) (bool, error) {
+	var sendEvent = func(message string, args ...interface{}) error {
 		c.recorder.Eventf(
 			memcached.ObjectReference(),
 			core.EventTypeWarning,
@@ -152,7 +165,7 @@ func (c *Controller) matchDormantDatabase(memcached *api.Memcached) (bool, error
 			message,
 			args,
 		)
-		return false, fmt.Errorf(message, args)
+		return fmt.Errorf(message, args)
 	}
 
 	// Check DatabaseKind
@@ -168,24 +181,7 @@ func (c *Controller) matchDormantDatabase(memcached *api.Memcached) (bool, error
 		return sendEvent("Memcached spec mismatches with OriginSpec in DormantDatabases")
 	}
 
-	if err := c.ExtClient.Memcacheds(memcached.Namespace).Delete(memcached.Name, &metav1.DeleteOptions{}); err != nil {
-		return sendEvent(`failed to resume Memcached "%v" from DormantDatabase "%v". Error: %v`, memcached.Name, memcached.Name, err)
-	}
-
-	_, _, err = util.PatchDormantDatabase(c.ExtClient, dormantDb, func(in *api.DormantDatabase) *api.DormantDatabase {
-		in.Spec.Resume = true
-		return in
-	})
-	if err != nil {
-		c.recorder.Eventf(
-			memcached.ObjectReference(),
-			core.EventTypeWarning,
-			eventer.EventReasonFailedToUpdate,
-			err.Error(),
-		)
-		return sendEvent(err.Error())
-	}
-	return true, nil
+	return util.DeleteDormantDatabase(c.ExtClient, dormantDb.ObjectMeta)
 }
 
 func (c *Controller) pause(memcached *api.Memcached) error {
@@ -232,7 +228,7 @@ func (c *Controller) pause(memcached *api.Memcached) error {
 	)
 
 	if memcached.Spec.Monitor != nil {
-		if vt, err := c.deleteMonitor(memcached); err != nil {
+		if _, err := c.deleteMonitor(memcached); err != nil {
 			c.recorder.Eventf(
 				memcached.ObjectReference(),
 				core.EventTypeWarning,
@@ -242,20 +238,7 @@ func (c *Controller) pause(memcached *api.Memcached) error {
 			)
 			log.Errorln(err)
 			return nil
-		} else if vt != kutil.VerbUnchanged {
-			c.recorder.Eventf(
-				memcached.ObjectReference(),
-				core.EventTypeNormal,
-				eventer.EventReasonSuccessfulMonitorDelete,
-				"Successfully %s monitoring system.",
-				vt,
-			)
 		}
 	}
 	return nil
 }
-
-//func (c *Controller) reCreateMemcached(memcached *api.Memcached) error {
-//	//reCreateMemcached
-//	return nil
-//}

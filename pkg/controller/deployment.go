@@ -2,7 +2,6 @@ package controller
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/appscode/go/types"
 	"github.com/appscode/kutil"
@@ -10,19 +9,11 @@ import (
 	core_util "github.com/appscode/kutil/core/v1"
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	"github.com/kubedb/apimachinery/client/typed/kubedb/v1alpha1/util"
-	"github.com/kubedb/apimachinery/pkg/docker"
 	"github.com/kubedb/apimachinery/pkg/eventer"
 	apps "k8s.io/api/apps/v1beta1"
 	core "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-const (
-	// Duration in Minute
-	// Check whether pod under Deployment is running or not
-	// Continue checking for this duration until failure
-	durationCheckDeployment = time.Minute * 30
 )
 
 func (c *Controller) ensureDeployment(memcached *api.Memcached) (kutil.VerbType, error) {
@@ -55,7 +46,7 @@ func (c *Controller) ensureDeployment(memcached *api.Memcached) (kutil.VerbType,
 
 		in.Spec.Template.Spec.Containers = core_util.UpsertContainer(in.Spec.Template.Spec.Containers, core.Container{
 			Name:            api.ResourceNameMemcached,
-			Image:           fmt.Sprintf("%s:%s", docker.ImageMemcached, memcached.Spec.Version),
+			Image:           c.opt.Docker.GetImageWithTag(memcached),
 			ImagePullPolicy: core.PullIfNotPresent,
 			Ports: []core.ContainerPort{
 				{
@@ -64,7 +55,7 @@ func (c *Controller) ensureDeployment(memcached *api.Memcached) (kutil.VerbType,
 					Protocol:      core.ProtocolTCP,
 				},
 			},
-			//todo: security context
+			Resources: memcached.Spec.Resources,
 		})
 		if memcached.Spec.Monitor != nil &&
 			memcached.Spec.Monitor.Agent == api.AgentCoreosPrometheus &&
@@ -76,7 +67,7 @@ func (c *Controller) ensureDeployment(memcached *api.Memcached) (kutil.VerbType,
 					fmt.Sprintf("--address=:%d", memcached.Spec.Monitor.Prometheus.Port),
 					"--v=3",
 				},
-				Image:           docker.ImageOperator + ":" + c.opt.ExporterTag,
+				Image:           c.opt.Docker.GetOperatorImageWithTag(memcached),
 				ImagePullPolicy: core.PullIfNotPresent,
 				Ports: []core.ContainerPort{
 					{
@@ -102,16 +93,17 @@ func (c *Controller) ensureDeployment(memcached *api.Memcached) (kutil.VerbType,
 		return kutil.VerbUnchanged, err
 	}
 	// Check Deployment Pod status
-	if err := app_util.WaitUntilDeploymentReady(c.Client, deploymentMeta); err != nil {
-		c.recorder.Eventf(
-			memcached.ObjectReference(),
-			core.EventTypeWarning,
-			eventer.EventReasonFailedToStart,
-			`Failed to CreateOrPatch Deployment. Reason: %v`,
-			err,
-		)
-		return kutil.VerbUnchanged, err
-	} else if vt != kutil.VerbUnchanged {
+	if vt != kutil.VerbUnchanged {
+		if err := app_util.WaitUntilDeploymentReady(c.Client, deploymentMeta); err != nil {
+			c.recorder.Eventf(
+				memcached.ObjectReference(),
+				core.EventTypeWarning,
+				eventer.EventReasonFailedToStart,
+				`Failed to CreateOrPatch Deployment. Reason: %v`,
+				err,
+			)
+			return kutil.VerbUnchanged, err
+		}
 		c.recorder.Eventf(
 			memcached.ObjectReference(),
 			core.EventTypeNormal,
@@ -119,21 +111,21 @@ func (c *Controller) ensureDeployment(memcached *api.Memcached) (kutil.VerbType,
 			"Successfully %v Deployment",
 			vt,
 		)
+		mg, _, err := util.PatchMemcached(c.ExtClient, memcached, func(in *api.Memcached) *api.Memcached {
+			in.Status.Phase = api.DatabasePhaseRunning
+			return in
+		})
+		if err != nil {
+			c.recorder.Eventf(
+				memcached,
+				core.EventTypeWarning,
+				eventer.EventReasonFailedToUpdate,
+				err.Error(),
+			)
+			return kutil.VerbUnchanged, err
+		}
+		memcached.Status = mg.Status
 	}
-	mg, _, err := util.PatchMemcached(c.ExtClient, memcached, func(in *api.Memcached) *api.Memcached {
-		in.Status.Phase = api.DatabasePhaseRunning
-		return in
-	})
-	if err != nil {
-		c.recorder.Eventf(
-			memcached,
-			core.EventTypeWarning,
-			eventer.EventReasonFailedToUpdate,
-			err.Error(),
-		)
-		return kutil.VerbUnchanged, err
-	}
-	memcached.Status = mg.Status
 	return vt, nil
 }
 
@@ -150,28 +142,6 @@ func (c *Controller) checkDeployment(memcached *api.Memcached) error {
 	}
 	if deployment.Labels[api.LabelDatabaseKind] != api.ResourceKindMemcached || deployment.Labels[api.LabelDatabaseName] != dbName {
 		return fmt.Errorf(`intended deployment "%v" already exists`, dbName)
-	}
-	return nil
-}
-
-func (c *Controller) deleteDeployment(name, namespace string) error {
-	// Deployment for Memcached database
-	deployment, err := c.Client.AppsV1beta1().Deployments(namespace).Get(name, metav1.GetOptions{})
-	if err != nil {
-		if kerr.IsNotFound(err) {
-			return nil
-		} else {
-			return err
-		}
-	}
-	deletePolicy := metav1.DeletePropagationForeground
-	if err := c.Client.AppsV1beta1().Deployments(deployment.Namespace).Delete(deployment.Name, &metav1.DeleteOptions{
-		PropagationPolicy: &deletePolicy,
-	}); err != nil && !kerr.IsNotFound(err) {
-		return err
-	}
-	if err := core_util.WaitUntilPodDeletedBySelector(c.Client, namespace, deployment.Spec.Selector); err != nil {
-		return err
 	}
 	return nil
 }

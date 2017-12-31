@@ -2,6 +2,7 @@ package controller
 
 import (
 	"github.com/appscode/go/log"
+	apps_util "github.com/appscode/kutil/apps/v1beta1"
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,30 +17,30 @@ func (c *Controller) Exists(om *metav1.ObjectMeta) (bool, error) {
 		return false, nil
 	}
 
-	if memcached.DeletionTimestamp != nil {
-		return false, nil
-	}
-	return true, nil
+	return memcached.DeletionTimestamp == nil, nil
 }
 
 func (c *Controller) PauseDatabase(dormantDb *api.DormantDatabase) error {
-	// Delete Service
-	if err := c.DeleteService(dormantDb.Name, dormantDb.Namespace); err != nil {
-		log.Errorln(err)
-		return err
-	}
-
-	if err := c.deleteDeployment(dormantDb.OffshootName(), dormantDb.Namespace); err != nil && !kerr.IsNotFound(err) {
-		log.Errorln(err)
-		return err
-	}
-
 	memcached := &api.Memcached{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dormantDb.OffshootName(),
 			Namespace: dormantDb.Namespace,
 		},
 	}
+	// Delete Service
+	if err := c.deleteService(memcached.OffshootName(), dormantDb.Namespace); err != nil {
+		log.Errorln(err)
+		return err
+	}
+
+	if err := apps_util.DeleteDeployment(c.Client, metav1.ObjectMeta{
+		Name:      memcached.OffshootName(),
+		Namespace: dormantDb.Namespace,
+	}); err != nil {
+		log.Errorln(err)
+		return err
+	}
+
 	if err := c.deleteRBACStuff(memcached); err != nil {
 		log.Errorln(err)
 		return err
@@ -48,8 +49,6 @@ func (c *Controller) PauseDatabase(dormantDb *api.DormantDatabase) error {
 }
 
 func (c *Controller) WipeOutDatabase(dormantDb *api.DormantDatabase) error {
-	log.Info("No snapshot for Memcached.")
-
 	return nil
 }
 
