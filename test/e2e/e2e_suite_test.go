@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/appscode/go/homedir"
 	"github.com/appscode/go/log"
 	logs "github.com/appscode/go/log/golog"
 	pcm "github.com/coreos/prometheus-operator/pkg/client/monitoring/v1"
@@ -14,7 +15,6 @@ import (
 	"github.com/kubedb/memcached/pkg/controller"
 	"github.com/kubedb/memcached/pkg/docker"
 	"github.com/kubedb/memcached/test/e2e/framework"
-	"github.com/mitchellh/go-homedir"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/reporters"
 	. "github.com/onsi/gomega"
@@ -23,13 +23,13 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-var storageClass string
-var exporterTag string
-var dockerRegistry string
+var (
+	storageClass   string
+	dockerRegistry string
+)
 
 func init() {
 	flag.StringVar(&storageClass, "storageclass", "standard", "Kubernetes StorageClass name")
-	flag.StringVar(&exporterTag, "exporter-tag", "canary", "Tag of kubedb/operator used as exporter")
 	flag.StringVar(&dockerRegistry, "docker-registry", "kubedb", "User provided docker repository")
 }
 
@@ -53,8 +53,7 @@ func TestE2e(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 
-	userHome, err := homedir.Dir()
-	Expect(err).NotTo(HaveOccurred())
+	userHome := homedir.HomeDir()
 
 	// Kubernetes config
 	kubeconfigPath := filepath.Join(userHome, ".kube/config")
@@ -81,12 +80,10 @@ var _ = BeforeSuite(func() {
 
 	opt := controller.Options{
 		Docker: docker.Docker{
-			Registry:    dockerRegistry,
-			ExporterTag: exporterTag,
+			Registry: dockerRegistry,
 		},
 		OperatorNamespace: root.Namespace(),
 		GoverningService:  api.DatabaseNamePrefix,
-		MaxNumRequeues:    5,
 	}
 
 	// Controller
