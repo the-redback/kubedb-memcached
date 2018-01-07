@@ -1,5 +1,5 @@
-hash: 51c8d26838ab341b0bfda7cb81ea8beb7bfa3ea54bdcbf811f94c1a79f6fcbe4
-updated: 2018-01-03T18:56:58.192509203+06:00
+hash: 7576c33d9e8c60ed24cd729613778086f3b9e2cd8a000ae040d2a494a8d343ca
+updated: 2018-01-06T17:20:59.62693414-08:00
 imports:
 - name: cloud.google.com/go
   version: fe3d41e1ecb2ce36ad3a979037c9b9a2b726226f
@@ -41,7 +41,7 @@ imports:
 - name: github.com/appscode/mergo
   version: e3000cb3d28c72b837601cac94debd91032d19fe
 - name: github.com/appscode/osm
-  version: bd094241594e26fce6d54e17db21ff253df8cd22
+  version: 8175dd853f6f3d4530b14018901c79140e305f3a
   subpackages:
   - context
 - name: github.com/appscode/pat
@@ -145,7 +145,7 @@ imports:
   - proto
   - sortkeys
 - name: github.com/golang/glog
-  version: 23def4e6c14b4da8ac2ed8007337bc5eb5007998
+  version: 44145f04b68cf362d9c4df2182967c2275eaefed
 - name: github.com/golang/groupcache
   version: 02826c3e79038b59d737d3b1c0a1d937f71a4433
   subpackages:
@@ -162,7 +162,7 @@ imports:
 - name: github.com/google/btree
   version: 7d79101e329e5a3adf994758c578dab82b90c017
 - name: github.com/google/go-cmp
-  version: 97a1ff3c48253a51c601f6e4420181273b6ca0ea
+  version: 97aa668b73e764ccdd786bc3ccd2edffe621150e
   subpackages:
   - cmp
   - cmp/internal/diff
@@ -171,7 +171,7 @@ imports:
 - name: github.com/google/gofuzz
   version: 44d81051d367757e1c7c6a5a86423ece9afcf63c
 - name: github.com/google/uuid
-  version: e367a344cbe8e08149f9951115dc299ebd42b919
+  version: dec09d789f3dba190787f8b4454c7d3c936fed9e
 - name: github.com/googleapis/gnostic
   version: 0c5108395e2debce0d731cf0287ddf7242066aba
   subpackages:
@@ -197,7 +197,7 @@ imports:
   subpackages:
   - diskcache
 - name: github.com/hashicorp/go-version
-  version: ac737305c16432f4c660c6fc68cdcda4b5a0b5ae
+  version: 1b1de86cf2ec13494b6814b48157884efaf71c54
   repo: https://github.com/appscode/go-version.git
   vcs: git
 - name: github.com/hashicorp/golang-lru
@@ -223,7 +223,7 @@ imports:
 - name: github.com/juju/ratelimit
   version: 5b9ff866471762aa2ab2dced63c9fb6f53921342
 - name: github.com/kubedb/apimachinery
-  version: c62e5c9ee18651a8183c708df55ec8abd6ee2083
+  version: 7604bdfdd4e2b6f1c301847c8d43ecd8e726dc9d
   subpackages:
   - apis/kubedb
   - apis/kubedb/v1alpha1
@@ -237,7 +237,7 @@ imports:
   - pkg/storage
   - pkg/validator
 - name: github.com/kubernetes/apimachinery
-  version: cc51b76607439c12d6bfa78aab2a81e46107b24f
+  version: 91d8586aac31d9086939d077ba556d2c7fb157b4
   subpackages:
   - pkg/conversion
 - name: github.com/mailru/easyjson
@@ -372,7 +372,7 @@ imports:
   - unicode/norm
   - width
 - name: google.golang.org/api
-  version: 99aea8c56b9527d6ca9dc96b743c94e184ab704b
+  version: b1c0f9b3aa8fac163224fab909402d49c6dce50a
   subpackages:
   - gensupport
   - googleapi
@@ -427,7 +427,7 @@ imports:
   - storage/v1
   - storage/v1beta1
 - name: k8s.io/apiextensions-apiserver
-  version: 996a70a27a0dcf53642ca52601b9107cb2ad810a
+  version: d0becfa6529e20309bd6684f8486abc265cf0b59
   subpackages:
   - pkg/apis/apiextensions
   - pkg/apis/apiextensions/v1beta1
