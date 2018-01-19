@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-  <testsuite tests="3" failures="0" time="195.405187581">
-      <testcase name="Memcached Test General - should run successfully" classname="e2e Suite" time="55.04976418"></testcase>
-      <testcase name="Memcached Test General Multiple Replica should run successfully" classname="e2e Suite" time="60.070401136"></testcase>
+  <testsuite tests="2" failures="0" time="121.677933157">
+      <testcase name="Memcached Test General - should run successfully" classname="e2e Suite" time="53.912796324"></testcase>
   </testsuite>
