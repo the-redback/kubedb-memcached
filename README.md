@@ -2,6 +2,7 @@
 [![Build Status](https://travis-ci.org/kubedb/memcached.svg?branch=master)](https://travis-ci.org/kubedb/memcached)
 [![codecov](https://codecov.io/gh/kubedb/memcached/branch/master/graph/badge.svg)](https://codecov.io/gh/kubedb/memcached)
 [![Slack](http://slack.kubernetes.io/badge.svg)](http://slack.kubernetes.io)
+[![mailing list](https://img.shields.io/badge/mailing_list-join-blue.svg)](https://groups.google.com/forum/#!forum/kubedb)
 [![Twitter](https://img.shields.io/twitter/follow/kubedb.svg?style=social&logo=twitter&label=Follow)](https://twitter.com/intent/follow?screen_name=kubedb)
 
 # memcached
