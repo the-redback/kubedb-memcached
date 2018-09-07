@@ -1,5 +1,5 @@
-hash: bf9a0e3875491a5e8ed444e42f730761903c45dfb7c1f75844e26763f2336329
-updated: 2018-09-04T13:45:18.547030735-07:00
+hash: f79a772707edbfe4223e6fc355f93ede595ba660aa1dcffb80789087842fbc14
+updated: 2018-09-06T12:53:05.336627094-07:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -34,12 +34,13 @@ imports:
   - admission/v1beta1
   - registry/admissionreview/v1beta1
 - name: github.com/appscode/kutil
-  version: 5cf2a974fc598dbf5ed833f4bf9d766b9dc4fa02
+  version: 49a173de8c2edccbdea1185ee2621486003cd458
   subpackages:
   - apiextensions/v1beta1
   - apps/v1
   - core/v1
   - discovery
+  - dynamic
   - meta
   - tools/exec
   - tools/queue
@@ -257,7 +258,7 @@ imports:
 - name: github.com/google/btree
   version: 7d79101e329e5a3adf994758c578dab82b90c017
 - name: github.com/google/go-cmp
-  version: 2006917edc5a27cd174dbc4baba31a137d6cb9ff
+  version: 3af367b6b30c263d47e8895973edcca9a49cf029
   subpackages:
   - cmp
   - cmp/internal/diff
@@ -318,7 +319,7 @@ imports:
 - name: github.com/json-iterator/go
   version: 1624edc4454b8682399def8740d46db5e4362ba4
 - name: github.com/kubedb/apimachinery
-  version: 1e34763325582740fdd60fb127a594093c3daa49
+  version: 159e78e1025e075e293c98ea35e3ad835e77642f
   subpackages:
   - apis/kubedb
   - apis/kubedb/v1alpha1
@@ -517,7 +518,7 @@ imports:
   subpackages:
   - rate
 - name: google.golang.org/api
-  version: 0ad5a633fea1d4b64bf5e6a01e30d1fc466038e5
+  version: 49a9310a91459e9e5d4187bfb5a591434de572f7
   subpackages:
   - gensupport
   - googleapi
@@ -971,7 +972,7 @@ imports:
   - api/v1
   - osm
 - name: kmodules.xyz/offshoot-api
-  version: 5ff9de954aeb2148edc7a831671f3f875aa56f30
+  version: 53af0446a528dbf697541ec39bd6408871743d06
   repo: https://github.com/kmodules/offshoot-api.git
   vcs: git
   subpackages:
