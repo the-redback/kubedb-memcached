@@ -7,6 +7,10 @@ import:
 - package: github.com/coreos/prometheus-operator
   version: v0.23.2
 - package: github.com/jpillora/go-ogle-analytics
+- package: github.com/graymeta/stow
+  repo: https://github.com/appscode/stow.git
+  vcs: git
+  version: master
 - package: github.com/kubedb/apimachinery
   version: master
 - package: github.com/onsi/ginkgo
@@ -32,7 +36,9 @@ import:
   vcs: git
   version: release-1.11.3
 - package: k8s.io/client-go
-  version: kubernetes-1.11.3
+  repo: https://github.com/pharmer/client-go.git
+  vcs: git
+  version: release-1.11.3
 - package: k8s.io/kube-aggregator
   version: kubernetes-1.11.3
 - package: github.com/appscode/kutil

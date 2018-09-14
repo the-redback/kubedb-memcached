@@ -22,7 +22,6 @@ var _ = Describe("Memcached", func() {
 		memcached        *api.Memcached
 		memcachedVersion *api.MemcachedVersion
 		skipMessage      string
-		testSvc          *core.Service
 	)
 
 	BeforeEach(func() {
@@ -32,21 +31,16 @@ var _ = Describe("Memcached", func() {
 		skipMessage = ""
 	})
 
-	JustBeforeEach(func() {
-		if skipMessage != "" {
-			Skip(skipMessage)
-		}
-
-		testSvc = f.GetTestService(memcached.ObjectMeta)
-
-		By("Creating Service: " + testSvc.Name)
-		f.CreateService(testSvc)
-	})
-
 	AfterEach(func() {
 		By("Delete memcached")
 		err = f.DeleteMemcached(memcached.ObjectMeta)
-		Expect(err).NotTo(HaveOccurred())
+		if err != nil {
+			if kerr.IsNotFound(err) {
+				// MongoDB was not created. Hence, rest of cleanup is not necessary.
+				return
+			}
+			Expect(err).NotTo(HaveOccurred())
+		}
 
 		By("Wait for memcached to be paused")
 		f.EventuallyDormantDatabaseStatus(memcached.ObjectMeta).Should(matcher.HavePaused())
@@ -64,9 +58,6 @@ var _ = Describe("Memcached", func() {
 
 		By("Wait for memcached resources to be wipedOut")
 		f.EventuallyWipedOut(memcached.ObjectMeta).Should(Succeed())
-
-		By("Deleting Service: " + testSvc.Name)
-		f.DeleteService(testSvc.ObjectMeta)
 
 		err = f.DeleteMemcachedVersion(memcachedVersion.ObjectMeta)
 		if err != nil && !kerr.IsNotFound(err) {
@@ -255,6 +246,110 @@ var _ = Describe("Memcached", func() {
 						Expect(err).NotTo(HaveOccurred())
 					}
 				})
+			})
+		})
+
+		Context("Termination Policy", func() {
+			var (
+				key   string
+				value string
+			)
+			BeforeEach(func() {
+				key = rand.WithUniqSuffix("kubed-e2e")
+				value = rand.GenerateTokenWithLength(10)
+			})
+
+			var shouldRunWithTermination = func() {
+				// Create and wait for running Memcached
+				createAndWaitForRunning()
+
+				By("Inserting item into database")
+				f.EventuallySetItem(memcached.ObjectMeta, key, value).Should(BeTrue())
+
+				By("Retrieving item from database")
+				f.EventuallyGetItem(memcached.ObjectMeta, key).Should(BeEquivalentTo(value))
+
+			}
+
+			Context("with TerminationPolicyPause (default)", func() {
+				var shouldRunWithTerminationPause = func() {
+					shouldRunWithTermination()
+
+					By("Delete memcached")
+					err = f.DeleteMemcached(memcached.ObjectMeta)
+					Expect(err).NotTo(HaveOccurred())
+
+					// DormantDatabase.Status= paused, means memcached object is deleted
+					By("Wait for memcached to be paused")
+					f.EventuallyDormantDatabaseStatus(memcached.ObjectMeta).Should(matcher.HavePaused())
+
+					// Create Memcached object again to resume it
+					By("Create (pause) Memcached: " + memcached.Name)
+					err = f.CreateMemcached(memcached)
+					Expect(err).NotTo(HaveOccurred())
+
+					By("Wait for DormantDatabase to be deleted")
+					f.EventuallyDormantDatabase(memcached.ObjectMeta).Should(BeFalse())
+
+					By("Wait for Running memcached")
+					f.EventuallyMemcachedRunning(memcached.ObjectMeta).Should(BeTrue())
+
+					memcached, err = f.GetMemcached(memcached.ObjectMeta)
+					Expect(err).NotTo(HaveOccurred())
+
+					By("Inserting item into database")
+					f.EventuallySetItem(memcached.ObjectMeta, key, value).Should(BeTrue())
+
+					By("Retrieving item from database")
+					f.EventuallyGetItem(memcached.ObjectMeta, key).Should(BeEquivalentTo(value))
+
+				}
+
+				It("should create dormantdatabase successfully", shouldRunWithTerminationPause)
+			})
+
+			Context("with TerminationPolicyDelete", func() {
+				BeforeEach(func() {
+					memcached.Spec.TerminationPolicy = api.TerminationPolicyDelete
+				})
+
+				var shouldRunWithTerminationDelete = func() {
+					shouldRunWithTermination()
+
+					By("Delete memcached")
+					err = f.DeleteMemcached(memcached.ObjectMeta)
+					Expect(err).NotTo(HaveOccurred())
+
+					By("wait until memcached is deleted")
+					f.EventuallyMemcached(memcached.ObjectMeta).Should(BeFalse())
+
+					By("Checking DormantDatabase is not created")
+					f.EventuallyDormantDatabase(memcached.ObjectMeta).Should(BeFalse())
+				}
+
+				It("should run with TerminationPolicyDelete", shouldRunWithTerminationDelete)
+			})
+
+			Context("with TerminationPolicyWipeOut", func() {
+				BeforeEach(func() {
+					memcached.Spec.TerminationPolicy = api.TerminationPolicyWipeOut
+				})
+
+				var shouldRunWithTerminationWipeOut = func() {
+					shouldRunWithTermination()
+
+					By("Delete memcached")
+					err = f.DeleteMemcached(memcached.ObjectMeta)
+					Expect(err).NotTo(HaveOccurred())
+
+					By("wait until memcached is deleted")
+					f.EventuallyMemcached(memcached.ObjectMeta).Should(BeFalse())
+
+					By("Checking DormantDatabase is not created")
+					f.EventuallyDormantDatabase(memcached.ObjectMeta).Should(BeFalse())
+				}
+
+				It("should run with TerminationPolicyDelete", shouldRunWithTerminationWipeOut)
 			})
 		})
 
