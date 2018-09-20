@@ -1,5 +1,5 @@
-hash: 172a47a075837ec38c814fc6cf01d1b59ce1656ea1f252b3a5940e7e3591be5d
-updated: 2018-09-20T16:48:10.874141085+06:00
+hash: b7618e2672866ce13aaf57a029a6f4e510423bcede8ea081bcb215e75fcd73ba
+updated: 2018-09-20T11:03:21.792544117-07:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -225,7 +225,7 @@ imports:
 - name: github.com/ghodss/yaml
   version: 0ca9ea5df5451ffdf184b4428c902747c2c11cd7
 - name: github.com/go-ini/ini
-  version: 300e940a926eb277d3901b20bdfcc54928ad3642
+  version: 20b96f641a5ea98f2f8619ff4f3e061cff4833bd
 - name: github.com/go-openapi/jsonpointer
   version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
@@ -259,7 +259,7 @@ imports:
 - name: github.com/google/btree
   version: 7d79101e329e5a3adf994758c578dab82b90c017
 - name: github.com/google/go-cmp
-  version: 875f8df8b7965f1eac1098d36d677f807ac0b49e
+  version: 3af367b6b30c263d47e8895973edcca9a49cf029
   subpackages:
   - cmp
   - cmp/internal/diff
@@ -320,7 +320,7 @@ imports:
 - name: github.com/json-iterator/go
   version: 1624edc4454b8682399def8740d46db5e4362ba4
 - name: github.com/kubedb/apimachinery
-  version: bb2baed87600b4f0b4214ce6c8a488c128880569
+  version: 7760fb61e363cdc939e78708046db6a4d92ca77c
   subpackages:
   - apis/kubedb
   - apis/kubedb/v1alpha1
@@ -675,7 +675,7 @@ imports:
   - third_party/forked/golang/netutil
   - third_party/forked/golang/reflect
 - name: k8s.io/apiserver
-  version: dea48c5b25a85e0fa07fec5bd5b8ec8fcaae6653
+  version: 9970aee1898bc65beb8f3829b2ddf8e191777f78
   repo: https://github.com/pharmer/apiserver.git
   vcs: git
   subpackages:
