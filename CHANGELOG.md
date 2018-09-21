@@ -1,5 +1,58 @@
 # Change Log
 
+## [0.2.0-beta.0](https://github.com/kubedb/memcached/tree/0.2.0-beta.0) (2018-09-20)
+[Full Changelog](https://github.com/kubedb/memcached/compare/0.1.0...0.2.0-beta.0)
+
+**Merged pull requests:**
+
+- Show deprecated column for memcachedversions [\#77](https://github.com/kubedb/memcached/pull/77) ([hossainemruz](https://github.com/hossainemruz))
+- Support Termination Policy & Stop working for deprecated \*Versions [\#76](https://github.com/kubedb/memcached/pull/76) ([the-redback](https://github.com/the-redback))
+- Revendor k8s.io/apiserver [\#75](https://github.com/kubedb/memcached/pull/75) ([tamalsaha](https://github.com/tamalsaha))
+- Revendor kubernetes-1.11.3 [\#74](https://github.com/kubedb/memcached/pull/74) ([tamalsaha](https://github.com/tamalsaha))
+- Support UpdateStrategy [\#73](https://github.com/kubedb/memcached/pull/73) ([tamalsaha](https://github.com/tamalsaha))
+- Add TerminationPolicy for databases [\#72](https://github.com/kubedb/memcached/pull/72) ([tamalsaha](https://github.com/tamalsaha))
+- Revendor api [\#71](https://github.com/kubedb/memcached/pull/71) ([tamalsaha](https://github.com/tamalsaha))
+- Use IntHash as status.observedGeneration [\#70](https://github.com/kubedb/memcached/pull/70) ([tamalsaha](https://github.com/tamalsaha))
+- fix github status [\#69](https://github.com/kubedb/memcached/pull/69) ([tahsinrahman](https://github.com/tahsinrahman))
+- update pipeline [\#68](https://github.com/kubedb/memcached/pull/68) ([tahsinrahman](https://github.com/tahsinrahman))
+- Fix E2E test for minikube [\#67](https://github.com/kubedb/memcached/pull/67) ([the-redback](https://github.com/the-redback))
+- update pipeline [\#66](https://github.com/kubedb/memcached/pull/66) ([tahsinrahman](https://github.com/tahsinrahman))
+- Migrate memcached [\#65](https://github.com/kubedb/memcached/pull/65) ([tamalsaha](https://github.com/tamalsaha))
+- Use official exporter image [\#64](https://github.com/kubedb/memcached/pull/64) ([the-redback](https://github.com/the-redback))
+- Update status.ObservedGeneration for failure phase [\#63](https://github.com/kubedb/memcached/pull/63) ([the-redback](https://github.com/the-redback))
+- Keep track of ObservedGenerationHash [\#62](https://github.com/kubedb/memcached/pull/62) ([tamalsaha](https://github.com/tamalsaha))
+- Use NewObservableHandler [\#61](https://github.com/kubedb/memcached/pull/61) ([tamalsaha](https://github.com/tamalsaha))
+- Fix uninstall for concourse [\#60](https://github.com/kubedb/memcached/pull/60) ([tahsinrahman](https://github.com/tahsinrahman))
+- Revise immutable spec fields [\#59](https://github.com/kubedb/memcached/pull/59) ([tamalsaha](https://github.com/tamalsaha))
+- Support passing args via PodTemplate [\#58](https://github.com/kubedb/memcached/pull/58) ([tamalsaha](https://github.com/tamalsaha))
+- Revendor api [\#57](https://github.com/kubedb/memcached/pull/57) ([tamalsaha](https://github.com/tamalsaha))
+- Add support for running tests on cncf cluster [\#56](https://github.com/kubedb/memcached/pull/56) ([tahsinrahman](https://github.com/tahsinrahman))
+- Keep track of observedGeneration in status [\#55](https://github.com/kubedb/memcached/pull/55) ([tamalsaha](https://github.com/tamalsaha))
+- Separate StatsService for monitoring [\#54](https://github.com/kubedb/memcached/pull/54) ([shudipta](https://github.com/shudipta))
+-  Use MemcachedVersion for Memcached images [\#53](https://github.com/kubedb/memcached/pull/53) ([the-redback](https://github.com/the-redback))
+- Use updated crd spec [\#52](https://github.com/kubedb/memcached/pull/52) ([tamalsaha](https://github.com/tamalsaha))
+- Rename OffshootLabels to OffshootSelectors [\#51](https://github.com/kubedb/memcached/pull/51) ([tamalsaha](https://github.com/tamalsaha))
+- Revendor api [\#50](https://github.com/kubedb/memcached/pull/50) ([tamalsaha](https://github.com/tamalsaha))
+- Use kmodules monitoring and objectstore api [\#49](https://github.com/kubedb/memcached/pull/49) ([tamalsaha](https://github.com/tamalsaha))
+- Refactor concourse scripts [\#48](https://github.com/kubedb/memcached/pull/48) ([tahsinrahman](https://github.com/tahsinrahman))
+- Fix command `./hack/make.py test e2e` [\#47](https://github.com/kubedb/memcached/pull/47) ([the-redback](https://github.com/the-redback))
+- Support custom configuration [\#46](https://github.com/kubedb/memcached/pull/46) ([hossainemruz](https://github.com/hossainemruz))
+- Set generated binary name to mc-operator [\#45](https://github.com/kubedb/memcached/pull/45) ([tamalsaha](https://github.com/tamalsaha))
+- Don't add admission/v1beta1 group as a prioritized version [\#44](https://github.com/kubedb/memcached/pull/44) ([tamalsaha](https://github.com/tamalsaha))
+- Enable status subresource for crds [\#43](https://github.com/kubedb/memcached/pull/43) ([tamalsaha](https://github.com/tamalsaha))
+- Update client-go to v8.0.0 [\#42](https://github.com/kubedb/memcached/pull/42) ([tamalsaha](https://github.com/tamalsaha))
+- Format shell script [\#41](https://github.com/kubedb/memcached/pull/41) ([tamalsaha](https://github.com/tamalsaha))
+- Support ENV variables in CRDs [\#39](https://github.com/kubedb/memcached/pull/39) ([hossainemruz](https://github.com/hossainemruz))
+
+## [0.1.0](https://github.com/kubedb/memcached/tree/0.1.0) (2018-06-12)
+[Full Changelog](https://github.com/kubedb/memcached/compare/0.1.0-rc.0...0.1.0)
+
+**Merged pull requests:**
+
+-  Fixed missing error return [\#38](https://github.com/kubedb/memcached/pull/38) ([the-redback](https://github.com/the-redback))
+- Revendor dependencies [\#37](https://github.com/kubedb/memcached/pull/37) ([tamalsaha](https://github.com/tamalsaha))
+- Add changelog [\#36](https://github.com/kubedb/memcached/pull/36) ([tamalsaha](https://github.com/tamalsaha))
+
 ## [0.1.0-rc.0](https://github.com/kubedb/memcached/tree/0.1.0-rc.0) (2018-05-28)
 [Full Changelog](https://github.com/kubedb/memcached/compare/0.1.0-beta.2...0.1.0-rc.0)
 
@@ -43,7 +96,6 @@
 **Merged pull requests:**
 
 - Fix Analytics and Rbac [\#12](https://github.com/kubedb/memcached/pull/12) ([the-redback](https://github.com/the-redback))
-- update docker image validation [\#11](https://github.com/kubedb/memcached/pull/11) ([the-redback](https://github.com/the-redback))
 - Add Docker-registry and Fixed resume Dormant DB [\#10](https://github.com/kubedb/memcached/pull/10) ([the-redback](https://github.com/the-redback))
 - Check validation first [\#8](https://github.com/kubedb/memcached/pull/8) ([tamalsaha](https://github.com/tamalsaha))
 - Set client id for analytics [\#7](https://github.com/kubedb/memcached/pull/7) ([tamalsaha](https://github.com/tamalsaha))
