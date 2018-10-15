@@ -1,5 +1,32 @@
 # Change Log
 
+## [0.2.0-rc.0](https://github.com/kubedb/memcached/tree/0.2.0-rc.0) (2018-10-15)
+[Full Changelog](https://github.com/kubedb/memcached/compare/0.2.0-beta.1...0.2.0-rc.0)
+
+**Merged pull requests:**
+
+- Support providing resources for monitoring container [\#93](https://github.com/kubedb/memcached/pull/93) ([tamalsaha](https://github.com/tamalsaha))
+- Update kubernetes client libraries to 1.12.0 [\#92](https://github.com/kubedb/memcached/pull/92) ([tamalsaha](https://github.com/tamalsaha))
+- Add validation webhook xray [\#91](https://github.com/kubedb/memcached/pull/91) ([tamalsaha](https://github.com/tamalsaha))
+- Various Fixes [\#90](https://github.com/kubedb/memcached/pull/90) ([hossainemruz](https://github.com/hossainemruz))
+- Merge ports from service template [\#88](https://github.com/kubedb/memcached/pull/88) ([tamalsaha](https://github.com/tamalsaha))
+- Replace doNotPause with TerminationPolicy = DoNotTerminate [\#87](https://github.com/kubedb/memcached/pull/87) ([tamalsaha](https://github.com/tamalsaha))
+- Pass resources to NamespaceValidator [\#86](https://github.com/kubedb/memcached/pull/86) ([tamalsaha](https://github.com/tamalsaha))
+- Various fixes [\#85](https://github.com/kubedb/memcached/pull/85) ([tamalsaha](https://github.com/tamalsaha))
+- Support Livecycle hook and container probes [\#84](https://github.com/kubedb/memcached/pull/84) ([tamalsaha](https://github.com/tamalsaha))
+- Check if Kubernetes version is supported before running operator [\#83](https://github.com/kubedb/memcached/pull/83) ([tamalsaha](https://github.com/tamalsaha))
+- Update package alias [\#82](https://github.com/kubedb/memcached/pull/82) ([tamalsaha](https://github.com/tamalsaha))
+
+## [0.2.0-beta.1](https://github.com/kubedb/memcached/tree/0.2.0-beta.1) (2018-09-30)
+[Full Changelog](https://github.com/kubedb/memcached/compare/0.2.0-beta.0...0.2.0-beta.1)
+
+**Merged pull requests:**
+
+- Revendor api [\#81](https://github.com/kubedb/memcached/pull/81) ([tamalsaha](https://github.com/tamalsaha))
+- Fix tests [\#80](https://github.com/kubedb/memcached/pull/80) ([tamalsaha](https://github.com/tamalsaha))
+- Revendor api for catalog apigroup [\#79](https://github.com/kubedb/memcached/pull/79) ([tamalsaha](https://github.com/tamalsaha))
+- Use --pull flag with docker build \(\#20\) [\#78](https://github.com/kubedb/memcached/pull/78) ([tamalsaha](https://github.com/tamalsaha))
+
 ## [0.2.0-beta.0](https://github.com/kubedb/memcached/tree/0.2.0-beta.0) (2018-09-20)
 [Full Changelog](https://github.com/kubedb/memcached/compare/0.1.0...0.2.0-beta.0)
 
