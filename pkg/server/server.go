@@ -192,7 +192,7 @@ func (c completedConfig) New() (*MemcachedServer, error) {
 					xray := reg_util.NewCreateValidatingWebhookXray(c.OperatorConfig.ClientConfig, apiserviceName, &api.Memcached{
 						TypeMeta: metav1.TypeMeta{
 							APIVersion: api.SchemeGroupVersion.String(),
-							Kind:       api.ResourceKindRedis,
+							Kind:       api.ResourceKindMemcached,
 						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "test-memcached-for-webhook-xray",
