@@ -1,5 +1,34 @@
 # Change Log
 
+## [0.2.0](https://github.com/kubedb/memcached/tree/0.2.0) (2018-12-17)
+[Full Changelog](https://github.com/kubedb/memcached/compare/0.2.0-rc.2...0.2.0)
+
+**Merged pull requests:**
+
+- Reuse event recorder [\#105](https://github.com/kubedb/memcached/pull/105) ([tamalsaha](https://github.com/tamalsaha))
+- Revendor dependencies [\#104](https://github.com/kubedb/memcached/pull/104) ([tamalsaha](https://github.com/tamalsaha))
+
+## [0.2.0-rc.2](https://github.com/kubedb/memcached/tree/0.2.0-rc.2) (2018-12-06)
+[Full Changelog](https://github.com/kubedb/memcached/compare/0.2.0-rc.1...0.2.0-rc.2)
+
+**Merged pull requests:**
+
+- Ignore mutation of fields to default values during update [\#102](https://github.com/kubedb/memcached/pull/102) ([tamalsaha](https://github.com/tamalsaha))
+- Support configuration options for exporter sidecar [\#101](https://github.com/kubedb/memcached/pull/101) ([tamalsaha](https://github.com/tamalsaha))
+- Use flags.DumpAll [\#100](https://github.com/kubedb/memcached/pull/100) ([tamalsaha](https://github.com/tamalsaha))
+
+## [0.2.0-rc.1](https://github.com/kubedb/memcached/tree/0.2.0-rc.1) (2018-12-02)
+[Full Changelog](https://github.com/kubedb/memcached/compare/0.2.0-rc.0...0.2.0-rc.1)
+
+**Merged pull requests:**
+
+- Apply cleanup [\#99](https://github.com/kubedb/memcached/pull/99) ([tamalsaha](https://github.com/tamalsaha))
+- Set periodic analytics [\#98](https://github.com/kubedb/memcached/pull/98) ([tamalsaha](https://github.com/tamalsaha))
+- Introduce AppBinding support [\#97](https://github.com/kubedb/memcached/pull/97) ([the-redback](https://github.com/the-redback))
+- Fix analytics [\#96](https://github.com/kubedb/memcached/pull/96) ([the-redback](https://github.com/the-redback))
+- Fix operator startup in minikube [\#95](https://github.com/kubedb/memcached/pull/95) ([the-redback](https://github.com/the-redback))
+- Add CRDS without observation when operator starts [\#94](https://github.com/kubedb/memcached/pull/94) ([the-redback](https://github.com/the-redback))
+
 ## [0.2.0-rc.0](https://github.com/kubedb/memcached/tree/0.2.0-rc.0) (2018-10-15)
 [Full Changelog](https://github.com/kubedb/memcached/compare/0.2.0-beta.1...0.2.0-rc.0)
 
