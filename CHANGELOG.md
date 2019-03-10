@@ -1,5 +1,18 @@
 # Change Log
 
+## [0.3.0](https://github.com/kubedb/memcached/tree/0.3.0) (2019-02-19)
+[Full Changelog](https://github.com/kubedb/memcached/compare/0.2.0...0.3.0)
+
+**Merged pull requests:**
+
+- Revendor dependencies [\#112](https://github.com/kubedb/memcached/pull/112) ([tamalsaha](https://github.com/tamalsaha))
+- Initial RBAC support: create and use K8s service account for Memcached [\#111](https://github.com/kubedb/memcached/pull/111) ([the-redback](https://github.com/the-redback))
+-  Revendor dependencies [\#110](https://github.com/kubedb/memcached/pull/110) ([the-redback](https://github.com/the-redback))
+- Revendor dependencies [\#109](https://github.com/kubedb/memcached/pull/109) ([the-redback](https://github.com/the-redback))
+- Add certificate health checker [\#108](https://github.com/kubedb/memcached/pull/108) ([tamalsaha](https://github.com/tamalsaha))
+- Update E2E test: Env update is not restricted anymore [\#107](https://github.com/kubedb/memcached/pull/107) ([the-redback](https://github.com/the-redback))
+- Fix app binding [\#106](https://github.com/kubedb/memcached/pull/106) ([tamalsaha](https://github.com/tamalsaha))
+
 ## [0.2.0](https://github.com/kubedb/memcached/tree/0.2.0) (2018-12-17)
 [Full Changelog](https://github.com/kubedb/memcached/compare/0.2.0-rc.2...0.2.0)
 
