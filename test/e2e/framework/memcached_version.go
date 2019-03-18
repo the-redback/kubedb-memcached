@@ -25,7 +25,7 @@ func (i *Invocation) MemcachedVersion() *api.MemcachedVersion {
 				Image: fmt.Sprintf("%s/operator:%s", DockerRegistry, ExporterTag),
 			},
 			PodSecurityPolicies: api.MemcachedVersionPodSecurityPolicy{
-				DatabasePolicyName:    "memcached-db",
+				DatabasePolicyName: "memcached-db",
 			},
 		},
 	}
