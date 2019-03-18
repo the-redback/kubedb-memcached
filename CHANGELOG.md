@@ -1,5 +1,16 @@
 # Change Log
 
+## [0.4.0](https://github.com/kubedb/memcached/tree/0.4.0) (2019-03-18)
+[Full Changelog](https://github.com/kubedb/memcached/compare/0.3.0...0.4.0)
+
+**Merged pull requests:**
+
+- DB psp in e2e test framework [\#117](https://github.com/kubedb/memcached/pull/117) ([iamrz1](https://github.com/iamrz1))
+- Don't inherit app.kubernetes.io labels from CRD into offshoots [\#116](https://github.com/kubedb/memcached/pull/116) ([tamalsaha](https://github.com/tamalsaha))
+- Add role label to stats service [\#115](https://github.com/kubedb/memcached/pull/115) ([tamalsaha](https://github.com/tamalsaha))
+- PSP support for Memcached [\#114](https://github.com/kubedb/memcached/pull/114) ([iamrz1](https://github.com/iamrz1))
+- Update Kubernetes client libraries to 1.13.0 release [\#113](https://github.com/kubedb/memcached/pull/113) ([tamalsaha](https://github.com/tamalsaha))
+
 ## [0.3.0](https://github.com/kubedb/memcached/tree/0.3.0) (2019-02-19)
 [Full Changelog](https://github.com/kubedb/memcached/compare/0.2.0...0.3.0)
 
