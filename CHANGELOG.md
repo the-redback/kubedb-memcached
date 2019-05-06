@@ -1,5 +1,14 @@
 # Change Log
 
+## [0.5.0](https://github.com/kubedb/memcached/tree/0.5.0) (2019-05-06)
+[Full Changelog](https://github.com/kubedb/memcached/compare/0.4.0...0.5.0)
+
+**Merged pull requests:**
+
+- Revendor dependencies [\#120](https://github.com/kubedb/memcached/pull/120) ([tamalsaha](https://github.com/tamalsaha))
+- Fix PSP in Role for kubeDB upgrade [\#119](https://github.com/kubedb/memcached/pull/119) ([iamrz1](https://github.com/iamrz1))
+- Modify mutator validator names [\#118](https://github.com/kubedb/memcached/pull/118) ([iamrz1](https://github.com/iamrz1))
+
 ## [0.4.0](https://github.com/kubedb/memcached/tree/0.4.0) (2019-03-18)
 [Full Changelog](https://github.com/kubedb/memcached/compare/0.3.0...0.4.0)
 
