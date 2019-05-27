@@ -3,7 +3,7 @@ package controller
 import (
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	core "k8s.io/api/core/v1"
-	policy_v1beta1 "k8s.io/api/policy/v1beta1"
+	policy "k8s.io/api/policy/v1beta1"
 	rbac "k8s.io/api/rbac/v1beta1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,7 +13,7 @@ import (
 	rbac_util "kmodules.xyz/client-go/rbac/v1beta1"
 )
 
-func (c *Controller) createServiceAccount(db *api.Memcached) error {
+func (c *Controller) createServiceAccount(db *api.Memcached, saName string) error {
 	ref, rerr := reference.GetReference(clientsetscheme.Scheme, db)
 	if rerr != nil {
 		return rerr
@@ -22,7 +22,7 @@ func (c *Controller) createServiceAccount(db *api.Memcached) error {
 	_, _, err := core_util.CreateOrPatchServiceAccount(
 		c.Client,
 		metav1.ObjectMeta{
-			Name:      db.OffshootName(),
+			Name:      saName,
 			Namespace: db.Namespace,
 		},
 		func(in *core.ServiceAccount) *core.ServiceAccount {
@@ -53,7 +53,7 @@ func (c *Controller) ensureRole(db *api.Memcached, name string, pspName string) 
 			in.Rules = []rbac.PolicyRule{}
 			if pspName != "" {
 				pspRule := rbac.PolicyRule{
-					APIGroups:     []string{policy_v1beta1.GroupName},
+					APIGroups:     []string{policy.GroupName},
 					Resources:     []string{"podsecuritypolicies"},
 					Verbs:         []string{"use"},
 					ResourceNames: []string{pspName},
@@ -66,7 +66,7 @@ func (c *Controller) ensureRole(db *api.Memcached, name string, pspName string) 
 	return err
 }
 
-func (c *Controller) createRoleBinding(db *api.Memcached, name string) error {
+func (c *Controller) createRoleBinding(db *api.Memcached, roleName string, saName string) error {
 	ref, rerr := reference.GetReference(clientsetscheme.Scheme, db)
 	if rerr != nil {
 		return rerr
@@ -75,7 +75,7 @@ func (c *Controller) createRoleBinding(db *api.Memcached, name string) error {
 	_, _, err := rbac_util.CreateOrPatchRoleBinding(
 		c.Client,
 		metav1.ObjectMeta{
-			Name:      name,
+			Name:      roleName,
 			Namespace: db.Namespace,
 		},
 		func(in *rbac.RoleBinding) *rbac.RoleBinding {
@@ -84,12 +84,12 @@ func (c *Controller) createRoleBinding(db *api.Memcached, name string) error {
 			in.RoleRef = rbac.RoleRef{
 				APIGroup: rbac.GroupName,
 				Kind:     "Role",
-				Name:     name,
+				Name:     roleName,
 			}
 			in.Subjects = []rbac.Subject{
 				{
 					Kind:      rbac.ServiceAccountKind,
-					Name:      name,
+					Name:      saName,
 					Namespace: db.Namespace,
 				},
 			}
@@ -110,25 +110,38 @@ func (c *Controller) getPolicyNames(db *api.Memcached) (string, error) {
 }
 
 func (c *Controller) ensureRBACStuff(memcached *api.Memcached) error {
-	dbPolicyName, err := c.getPolicyNames(memcached)
-	if err != nil {
-		return err
+	saName := memcached.Spec.PodTemplate.Spec.ServiceAccountName
+	if saName == "" {
+		saName = memcached.OffshootName()
+		memcached.Spec.PodTemplate.Spec.ServiceAccountName = saName
 	}
 
-	// Create New ServiceAccount
-	if err := c.createServiceAccount(memcached); err != nil {
-		if !kerr.IsAlreadyExists(err) {
-			return err
+	sa, err := c.Client.CoreV1().ServiceAccounts(memcached.Namespace).Get(saName, metav1.GetOptions{})
+	if kerr.IsNotFound(err) {
+		// create service account, since it does not exist
+		if err = c.createServiceAccount(memcached, saName); err != nil {
+			if !kerr.IsAlreadyExists(err) {
+				return err
+			}
 		}
+	} else if err != nil {
+		return err
+	} else if !core_util.IsOwnedBy(sa, memcached) {
+		// user provided the service account, so do nothing.
+		return nil
 	}
 
 	// Create New Role
-	if err := c.ensureRole(memcached, memcached.OffshootName(), dbPolicyName); err != nil {
+	pspName, err := c.getPolicyNames(memcached)
+	if err != nil {
+		return err
+	}
+	if err := c.ensureRole(memcached, memcached.OffshootName(), pspName); err != nil {
 		return err
 	}
 
 	// Create New RoleBinding
-	if err := c.createRoleBinding(memcached, memcached.OffshootName()); err != nil {
+	if err := c.createRoleBinding(memcached, memcached.OffshootName(), saName); err != nil {
 		return err
 	}
 
