@@ -9,8 +9,14 @@ import (
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	"github.com/kubedb/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1/util"
 	. "github.com/onsi/gomega"
+	policy "k8s.io/api/policy/v1beta1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+)
+
+const (
+	kindEviction = "Eviction"
 )
 
 func (f *Invocation) Memcached() *api.Memcached {
@@ -96,4 +102,63 @@ func (f *Framework) CleanMemcached() {
 	if err := f.extClient.KubedbV1alpha1().Memcacheds(f.namespace).DeleteCollection(deleteInBackground(), metav1.ListOptions{}); err != nil {
 		fmt.Printf("error in deletion of Memcached. Error: %v", err)
 	}
+}
+
+func (f *Framework) EvictPodsFromDeployment(meta metav1.ObjectMeta) error {
+	var err error
+	deployName := meta.Name
+	//if PDB is not found, send error
+	pdb, err := f.kubeClient.PolicyV1beta1().PodDisruptionBudgets(meta.Namespace).Get(deployName, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	if pdb.Spec.MinAvailable == nil {
+		return fmt.Errorf("found pdb %s spec.minAvailable nil", pdb.Name)
+	}
+
+	podSelector := labels.Set{
+		api.LabelDatabaseKind: api.ResourceKindMemcached,
+		api.LabelDatabaseName: meta.GetName(),
+	}
+	pods, err := f.kubeClient.CoreV1().Pods(meta.Namespace).List(metav1.ListOptions{LabelSelector: podSelector.String()})
+	if err != nil {
+		return err
+	}
+	podCount := len(pods.Items)
+	if podCount < 1 {
+		return fmt.Errorf("found no pod in namespace %s with given labels", meta.Namespace)
+	}
+	eviction := &policy.Eviction{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: policy.SchemeGroupVersion.String(),
+			Kind:       kindEviction,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: meta.Namespace,
+		},
+		DeleteOptions: &metav1.DeleteOptions{},
+	}
+
+	// try to evict as many pods as allowed in pdb
+	minAvailable := pdb.Spec.MinAvailable.IntValue()
+	for i, pod := range pods.Items {
+		eviction.Name = pod.Name
+		err = f.kubeClient.PolicyV1beta1().Evictions(eviction.Namespace).Evict(eviction)
+		if i < (podCount - minAvailable) {
+			if err != nil {
+				return err
+			}
+		} else {
+			// This pod should not get evicted
+			if kerr.IsTooManyRequests(err) {
+				err = nil
+				break
+			} else if err != nil {
+				return err
+			} else {
+				return fmt.Errorf("expected pod %s/%s to be not evicted due to pdb %s", meta.Namespace, eviction.Name, pdb.Name)
+			}
+		}
+	}
+	return err
 }

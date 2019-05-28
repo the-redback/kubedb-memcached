@@ -5,6 +5,7 @@ import (
 
 	"github.com/appscode/go/crypto/rand"
 	"github.com/appscode/go/log"
+	"github.com/appscode/go/types"
 	catalog "github.com/kubedb/apimachinery/apis/catalog/v1alpha1"
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	"github.com/kubedb/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1/util"
@@ -193,6 +194,18 @@ var _ = Describe("Memcached", func() {
 					Expect(err).NotTo(HaveOccurred())
 					createAndWaitForRunning()
 				})
+			})
+		})
+
+		Context("PDB", func() {
+			It("should evict successfully", func() {
+				// Create Memcached
+				memcached.Spec.Replicas = types.Int32P(3)
+				createAndWaitForRunning()
+				//Evict Memcached pod
+				By("Try to evict a pod")
+				err := f.EvictPodsFromDeployment(memcached.ObjectMeta)
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
