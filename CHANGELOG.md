@@ -1,5 +1,22 @@
 # Change Log
 
+## [v0.6.0-rc.0](https://github.com/kubedb/memcached/tree/v0.6.0-rc.0) (2019-08-22)
+[Full Changelog](https://github.com/kubedb/memcached/compare/0.5.0...v0.6.0-rc.0)
+
+**Merged pull requests:**
+
+- Improve test: Use installed memcachedversions [\#131](https://github.com/kubedb/memcached/pull/131) ([the-redback](https://github.com/the-redback))
+- Update dependencies [\#130](https://github.com/kubedb/memcached/pull/130) ([tamalsaha](https://github.com/tamalsaha))
+- Don't set annotation to AppBinding [\#129](https://github.com/kubedb/memcached/pull/129) ([hossainemruz](https://github.com/hossainemruz))
+- Set database version in AppBinding [\#128](https://github.com/kubedb/memcached/pull/128) ([hossainemruz](https://github.com/hossainemruz))
+- Change package path to kubedb.dev/memcached [\#127](https://github.com/kubedb/memcached/pull/127) ([tamalsaha](https://github.com/tamalsaha))
+- Add license header to Makefiles [\#126](https://github.com/kubedb/memcached/pull/126) ([tamalsaha](https://github.com/tamalsaha))
+- Add install, uninstall and purge command in Makefile [\#125](https://github.com/kubedb/memcached/pull/125) ([hossainemruz](https://github.com/hossainemruz))
+- Add Makefile [\#124](https://github.com/kubedb/memcached/pull/124) ([tamalsaha](https://github.com/tamalsaha))
+- Pod Disruption Budget for Memcached [\#123](https://github.com/kubedb/memcached/pull/123) ([iamrz1](https://github.com/iamrz1))
+- Handling resource ownership [\#122](https://github.com/kubedb/memcached/pull/122) ([iamrz1](https://github.com/iamrz1))
+- Update to k8s 1.14.0 client libraries using go.mod [\#121](https://github.com/kubedb/memcached/pull/121) ([tamalsaha](https://github.com/tamalsaha))
+
 ## [0.5.0](https://github.com/kubedb/memcached/tree/0.5.0) (2019-05-06)
 [Full Changelog](https://github.com/kubedb/memcached/compare/0.4.0...0.5.0)
 
